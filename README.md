@@ -1,7 +1,7 @@
 - 👋 Hi, I’m @layudhi
-- 👀 I’m interested in automation, PLC, Arduino, AI and Digital Signal Processing
-- 🌱 I’m currently learning MatLab and Arduino
-- 💞️ I’m looking to collaborate on Arduino Project
+- 👀 I’m interested in automation, PLC/SCADA/DCS, Arduino, AI and Digital Signal Processing
+- 🌱 I’m currently learning MatLab, Arduino and Python
+- 💞️ I’m looking to collaborate on Arduino/PLC/Python Project
 - 📫 How to reach me by email to yudhi.afandi@gmail.com
 
 <!---
