@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import os
+import sys
 import tempfile
+from pathlib import Path
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 import streamlit as st
 
-from .core import PriceFormula, build_analysis, load_mops_csv
-from .sources import PUBLIC_SOURCES, ProxyConfig, fetch_public_source
+from gasoil_app.core import PriceFormula, build_analysis, load_mops_csv
+from gasoil_app.sources import PUBLIC_SOURCES, ProxyConfig, fetch_public_source
 
 st.set_page_config(page_title="Gasoil MOPS Singapore", layout="wide")
 st.title("Pengecekan & Prediksi Harga Gasoil Berbasis MOPS/Proxy Publik")

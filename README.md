@@ -48,9 +48,19 @@ pip install -r requirements.txt
 
 ## Menjalankan aplikasi web
 
+Dari folder root repository, jalankan salah satu perintah berikut:
+
 ```bash
 streamlit run gasoil_app/app.py
 ```
+
+Atau, di Windows/PowerShell jika perintah `streamlit` belum masuk `PATH`:
+
+```powershell
+python -m streamlit run gasoil_app/app.py
+```
+
+`app.py` juga sudah dibuat aman dari error `attempted relative import with no known parent package` saat dijalankan langsung dari path file. Namun untuk pengalaman web yang benar, tetap disarankan menjalankannya melalui `streamlit run` atau `python -m streamlit run`.
 
 Di sidebar, pilih:
 

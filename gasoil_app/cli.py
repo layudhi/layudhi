@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 
-from .core import PriceFormula, build_analysis, load_mops_csv, write_csv
-from .sources import ProxyConfig, fetch_public_source, source_help_lines
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from gasoil_app.core import PriceFormula, build_analysis, load_mops_csv, write_csv
+from gasoil_app.sources import ProxyConfig, fetch_public_source, source_help_lines
 
 
 def build_parser() -> argparse.ArgumentParser:
