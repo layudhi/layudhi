@@ -10,7 +10,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from gasoil_app.core import PriceFormula, build_analysis, load_mops_csv, write_csv
-from gasoil_app.sources import ProxyConfig, fetch_public_source, source_help_lines
+from gasoil_app.sources import ONLINE_SOURCE_CHOICES, ProxyConfig, fetch_public_source, source_help_lines
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     input_group.add_argument("--csv", help="Path CSV lokal berisi kolom date,mops_usd_per_bbl")
     input_group.add_argument(
         "--source",
-        choices=["yahoo_heating_oil", "yahoo_brent", "yahoo_low_sulphur_gasoil", "orb_markets", "csv_url"],
+        choices=ONLINE_SOURCE_CHOICES,
         help="Ambil data online dari sumber publik/proxy",
     )
     parser.add_argument("--symbol", help="Override simbol Yahoo Finance, contoh HO=F atau BZ=F")

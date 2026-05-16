@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 
 from gasoil_app.core import PriceFormula, build_analysis, load_mops_csv
-from gasoil_app.sources import PUBLIC_SOURCES, ProxyConfig, fetch_public_source
+from gasoil_app.sources import ONLINE_SOURCE_CHOICES, PUBLIC_SOURCES, ProxyConfig, fetch_public_source
 
 st.set_page_config(page_title="Gasoil MOPS Singapore", layout="wide")
 st.title("Pengecekan & Prediksi Harga Gasoil Berbasis MOPS/Proxy Publik")
@@ -25,7 +25,7 @@ with st.sidebar:
     input_mode = st.radio("Mode", ["Ambil online", "Upload CSV"], index=0)
     source = st.selectbox(
         "Sumber online",
-        ["yahoo_heating_oil", "yahoo_brent", "yahoo_low_sulphur_gasoil", "csv_url"],
+        ONLINE_SOURCE_CHOICES,
         disabled=input_mode != "Ambil online",
     )
     symbol = st.text_input(
@@ -34,6 +34,11 @@ with st.sidebar:
         disabled=input_mode != "Ambil online" or source == "csv_url",
     )
     csv_url = st.text_input("URL CSV publik", disabled=input_mode != "Ambil online" or source != "csv_url")
+    orb_benchmark = st.text_input(
+        "Benchmark ORB",
+        value="Heating Oil",
+        disabled=input_mode != "Ambil online" or source != "orb_markets",
+    )
     unit = st.selectbox("Unit sumber", ["usd_per_bbl", "usd_per_gal", "usd_per_mt"], index=1)
     yahoo_range = st.selectbox("Range data online", ["6mo", "1y", "2y", "5y"], index=2)
 
@@ -100,6 +105,7 @@ try:
             quote_unit=selected_unit,
             range_=yahoo_range,
             url=csv_url or None,
+            orb_benchmark=orb_benchmark,
             proxy=proxy,
         )
         source_label = source

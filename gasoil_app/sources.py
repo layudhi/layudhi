@@ -103,6 +103,9 @@ PUBLIC_SOURCES: dict[str, PublicSource] = {
 }
 
 
+ONLINE_SOURCE_CHOICES = [*PUBLIC_SOURCES.keys(), "csv_url"]
+
+
 def convert_to_usd_per_bbl(value: float, unit: str) -> float:
     """Convert a public market quote into USD/barrel equivalent."""
 
@@ -247,7 +250,7 @@ def fetch_public_source(
         return fetch_orb_markets(benchmark=orb_benchmark, proxy=proxy)
 
     if source not in PUBLIC_SOURCES:
-        valid = ", ".join([*PUBLIC_SOURCES.keys(), "csv_url"])
+        valid = ", ".join(ONLINE_SOURCE_CHOICES)
         raise ValueError(f"source tidak dikenal. Pilihan: {valid}")
 
     preset = PUBLIC_SOURCES[source]

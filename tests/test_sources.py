@@ -4,6 +4,7 @@ from datetime import date
 import pytest
 
 from gasoil_app.sources import (
+    ONLINE_SOURCE_CHOICES,
     convert_to_usd_per_bbl,
     ProxyConfig,
     fetch_csv_url,
@@ -96,3 +97,8 @@ def test_fetch_yahoo_chart_forwards_proxy_config(monkeypatch: pytest.MonkeyPatch
     rows = fetch_yahoo_chart("BZ=F", "usd_per_bbl", proxy=proxy_config)
 
     assert rows == [{"date": date(2025, 1, 1), "mops_usd_per_bbl": 100.0}]
+
+
+def test_online_source_choices_include_orb_markets() -> None:
+    assert "orb_markets" in ONLINE_SOURCE_CHOICES
+    assert "csv_url" in ONLINE_SOURCE_CHOICES
