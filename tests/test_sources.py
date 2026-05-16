@@ -63,6 +63,26 @@ def test_parse_orb_markets_extracts_heating_oil_proxy() -> None:
     assert row["mops_usd_per_bbl"] == pytest.approx(168.84)
 
 
+
+
+def test_parse_orb_markets_extracts_card_layout() -> None:
+    html = "Heating Oil\n\nHO=F · USD/gal\n\n3.96\n\n▼ 0.00"
+
+    row = parse_orb_markets(html, benchmark="Heating Oil")
+
+    assert row["source_symbol"] == "HO=F"
+    assert row["mops_usd_per_bbl"] == pytest.approx(166.32)
+
+
+def test_parse_orb_markets_extracts_physical_mops_layout() -> None:
+    html = "Jet Fuel A-1 (Singapore MOPS)Singapore MOPS~1,351 EIA 11 May 2026 USD/MT"
+
+    row = parse_orb_markets(html, benchmark="Jet Fuel A-1 (Singapore MOPS)")
+
+    assert row["source_symbol"] == "ORB"
+    assert row["source_unit"] == "usd_per_mt"
+    assert row["mops_usd_per_bbl"] == pytest.approx(1351 / 7.46)
+
 def test_proxy_config_embeds_separate_credentials() -> None:
     proxy = ProxyConfig(
         url="http://proxy.company.local:8080",

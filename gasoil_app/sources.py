@@ -194,28 +194,91 @@ def fetch_csv_url(
     return [{DATE_COLUMN: row_date, MOPS_COLUMN: rows_by_date[row_date]} for row_date in sorted(rows_by_date)]
 
 
+ORB_SYMBOL_ALIASES = {
+    "WTI Crude Oil": "CL=F",
+    "Brent Crude Oil": "BZ=F",
+    "Natural Gas": "NG=F",
+    "Heating Oil": "HO=F",
+    "Gasoline (RBOB)": "RB=F",
+}
+
+
+def _normalize_orb_unit(unit: str | None, symbol: str | None = None) -> str:
+    normalized = (unit or "").strip().lower()
+    if normalized in {"usd/gal", "usd_per_gal"}:
+        return "usd_per_gal"
+    if normalized in {"usd/mt", "usd_per_mt"}:
+        return "usd_per_mt"
+    if normalized in {"usd/bbl", "usd_per_bbl"}:
+        return "usd_per_bbl"
+    return "usd_per_gal" if symbol == "HO=F" or symbol == "RB=F" else "usd_per_bbl"
+
+
+def _parse_float_text(value: str) -> float:
+    return float(value.replace("~", "").replace(",", "").strip())
+
+
+def _orb_error(benchmark: str) -> ValueError:
+    choices = ", ".join([*ORB_SYMBOL_ALIASES.keys(), "Jet Fuel A-1 (Singapore MOPS)", "EN590 Diesel 10ppm (Rotterdam CIF)"])
+    return ValueError(
+        f"Benchmark '{benchmark}' tidak ditemukan di halaman ORB. "
+        f"Coba salah satu benchmark: {choices}."
+    )
+
+
 def parse_orb_markets(html: str, benchmark: str = "Heating Oil") -> Row:
-    """Parse one benchmark quote from ORB's public markets HTML page."""
+    """Parse one benchmark quote from ORB's public markets HTML page.
 
-    escaped = re.escape(benchmark)
-    pattern = rf"{escaped}\s+([A-Z0-9=^.-]+)\s+([0-9][0-9,.]*)[▲▼+-]?"
-    match = re.search(pattern, html)
-    if not match:
-        compact = re.sub(r"\s+", " ", html)
-        match = re.search(pattern, compact)
-    if not match:
-        raise ValueError(f"Benchmark '{benchmark}' tidak ditemukan di halaman ORB")
+    ORB's public page has changed layout several times. This parser handles both
+    the compact table form (``Heating Oil HO=F 3.96 ... USD/gal``) and the card
+    form (``HO=F · USD/gal ... 3.96``), plus physical indicative rows such as
+    ``Jet Fuel A-1 (Singapore MOPS) ... ~1,351 ... USD/MT``.
+    """
 
-    symbol = match.group(1)
-    value = float(match.group(2).replace(",", ""))
-    unit = "usd_per_gal" if symbol == "HO=F" else "usd_per_bbl"
-    return {
-        DATE_COLUMN: date.today(),
-        MOPS_COLUMN: convert_to_usd_per_bbl(value, unit),
-        "source_symbol": symbol,
-        "source_unit": unit,
-        "source_benchmark": benchmark,
-    }
+    compact = re.sub(r"\s+", " ", html)
+    escaped_benchmark = re.escape(benchmark)
+    symbol = ORB_SYMBOL_ALIASES.get(benchmark)
+
+    if symbol:
+        escaped_symbol = re.escape(symbol)
+        patterns = [
+            rf"{escaped_benchmark}\s+{escaped_symbol}\s+~?([0-9][0-9,.]*)[^A-Z]*(USD/[A-Za-z0-9³]+)?",
+            rf"{escaped_symbol}\s*[·-]\s*(USD/[A-Za-z0-9³]+)\s+~?([0-9][0-9,.]*)",
+            rf"{escaped_symbol}\s+~?([0-9][0-9,.]*)",
+        ]
+        for idx, pattern in enumerate(patterns):
+            match = re.search(pattern, compact)
+            if not match:
+                continue
+            if idx == 1:
+                unit = _normalize_orb_unit(match.group(1), symbol)
+                value = _parse_float_text(match.group(2))
+            else:
+                value = _parse_float_text(match.group(1))
+                unit_match = re.search(rf"{escaped_symbol}.*?(USD/[A-Za-z0-9³]+)", compact)
+                unit = _normalize_orb_unit(unit_match.group(1) if unit_match else None, symbol)
+            return {
+                DATE_COLUMN: date.today(),
+                MOPS_COLUMN: convert_to_usd_per_bbl(value, unit),
+                "source_symbol": symbol,
+                "source_unit": unit,
+                "source_benchmark": benchmark,
+            }
+
+    physical_pattern = rf"{escaped_benchmark}.*?~?([0-9][0-9,.]*)[^U]*(USD/[A-Za-z0-9³]+)"
+    physical_match = re.search(physical_pattern, compact)
+    if physical_match:
+        value = _parse_float_text(physical_match.group(1))
+        unit = _normalize_orb_unit(physical_match.group(2))
+        return {
+            DATE_COLUMN: date.today(),
+            MOPS_COLUMN: convert_to_usd_per_bbl(value, unit),
+            "source_symbol": "ORB",
+            "source_unit": unit,
+            "source_benchmark": benchmark,
+        }
+
+    raise _orb_error(benchmark)
 
 
 def fetch_orb_markets(
