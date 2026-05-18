@@ -7,11 +7,16 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from typing import Iterable
+import sys
 from urllib.parse import quote, quote_plus, urlsplit, urlunsplit
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
-from .core import DATE_COLUMN, MOPS_COLUMN, Row, parse_date
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from gasoil_app.core import DATE_COLUMN, MOPS_COLUMN, Row, parse_date
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_}&interval={interval}"
 ORB_MARKETS_URL = "https://orb.group/in/markets"

@@ -1,5 +1,8 @@
 import json
+import subprocess
+import sys
 from datetime import date
+from pathlib import Path
 
 import pytest
 
@@ -169,3 +172,17 @@ def test_online_source_choices_include_public_links() -> None:
     assert "datahub_brent_daily" in ONLINE_SOURCE_CHOICES
     assert "eia_ultra_low_sulfur_diesel_ny" in ONLINE_SOURCE_CHOICES
     assert "csv_url" in ONLINE_SOURCE_CHOICES
+
+
+def test_sources_module_can_be_imported_as_top_level_script() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import sources; print(sources.ONLINE_SOURCE_CHOICES[0])"],
+        cwd=repo_root / "gasoil_app",
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout.strip() == "yahoo_heating_oil"
