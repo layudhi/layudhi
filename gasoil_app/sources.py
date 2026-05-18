@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import csv
+import html
 import io
 import json
 import re
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Iterable
 from urllib.parse import quote, quote_plus, urlsplit, urlunsplit
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
@@ -14,6 +15,8 @@ from .core import DATE_COLUMN, MOPS_COLUMN, Row, parse_date
 
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_}&interval={interval}"
 ORB_MARKETS_URL = "https://orb.group/in/markets"
+DATAHUB_OIL_PRICES_URL = "https://datahub.io/core/oil-prices"
+EIA_SPOT_PRICES_URL = "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm"
 GALLONS_PER_BBL = 42.0
 LS_GASOIL_MT_PER_BBL = 7.46
 
@@ -92,6 +95,62 @@ PUBLIC_SOURCES: dict[str, PublicSource] = {
         default_symbol="LGO=F",
         default_unit="usd_per_mt",
         description="Proxy ICE low sulphur gasoil bila simbol tersedia; dikonversi dari USD/MT ke USD/bbl.",
+    ),
+    "datahub_brent_daily": PublicSource(
+        key="datahub_brent_daily",
+        label="DataHub Brent daily CSV",
+        default_symbol=None,
+        default_unit="usd_per_bbl",
+        description="Brent spot daily dari DataHub oil-prices public dataset.",
+    ),
+    "datahub_wti_daily": PublicSource(
+        key="datahub_wti_daily",
+        label="DataHub WTI daily CSV",
+        default_symbol=None,
+        default_unit="usd_per_bbl",
+        description="WTI spot daily dari DataHub oil-prices public dataset.",
+    ),
+    "datahub_brent_monthly": PublicSource(
+        key="datahub_brent_monthly",
+        label="DataHub Brent monthly CSV",
+        default_symbol=None,
+        default_unit="usd_per_bbl",
+        description="Brent spot monthly dari DataHub oil-prices public dataset.",
+    ),
+    "datahub_wti_monthly": PublicSource(
+        key="datahub_wti_monthly",
+        label="DataHub WTI monthly CSV",
+        default_symbol=None,
+        default_unit="usd_per_bbl",
+        description="WTI spot monthly dari DataHub oil-prices public dataset.",
+    ),
+    "eia_ultra_low_sulfur_diesel_ny": PublicSource(
+        key="eia_ultra_low_sulfur_diesel_ny",
+        label="EIA ULSD New York Harbor spot",
+        default_symbol="EER_EPD2DXL0_PF4_Y35NY_DPG",
+        default_unit="usd_per_gal",
+        description="EIA DNav spot page: Ultra-Low-Sulfur No. 2 Diesel, New York Harbor.",
+    ),
+    "eia_ultra_low_sulfur_diesel_usgc": PublicSource(
+        key="eia_ultra_low_sulfur_diesel_usgc",
+        label="EIA ULSD U.S. Gulf Coast spot",
+        default_symbol="EER_EPD2DXL0_PF4_RGC_DPG",
+        default_unit="usd_per_gal",
+        description="EIA DNav spot page: Ultra-Low-Sulfur No. 2 Diesel, U.S. Gulf Coast.",
+    ),
+    "eia_heating_oil_ny": PublicSource(
+        key="eia_heating_oil_ny",
+        label="EIA Heating Oil New York Harbor spot",
+        default_symbol="EER_EPD2F_PF4_Y35NY_DPG",
+        default_unit="usd_per_gal",
+        description="EIA DNav spot page: No. 2 Heating Oil, New York Harbor.",
+    ),
+    "eia_jet_fuel_usgc": PublicSource(
+        key="eia_jet_fuel_usgc",
+        label="EIA Jet Fuel U.S. Gulf Coast spot",
+        default_symbol="EER_EPJK_PF4_RGC_DPG",
+        default_unit="usd_per_gal",
+        description="EIA DNav spot page: Kerosene-Type Jet Fuel, U.S. Gulf Coast.",
     ),
     "orb_markets": PublicSource(
         key="orb_markets",
@@ -192,6 +251,93 @@ def fetch_csv_url(
     if not rows_by_date:
         raise ValueError("CSV URL tidak menghasilkan data harga valid")
     return [{DATE_COLUMN: row_date, MOPS_COLUMN: rows_by_date[row_date]} for row_date in sorted(rows_by_date)]
+
+
+DATAHUB_OIL_PRICE_CSV_URLS = {
+    "datahub_brent_daily": "https://datahub.io/core/oil-prices/_r/-/data/brent-daily.csv",
+    "datahub_wti_daily": "https://datahub.io/core/oil-prices/_r/-/data/wti-daily.csv",
+    "datahub_brent_monthly": "https://datahub.io/core/oil-prices/_r/-/data/brent-monthly.csv",
+    "datahub_wti_monthly": "https://datahub.io/core/oil-prices/_r/-/data/wti-monthly.csv",
+}
+
+EIA_HISTORY_SERIES = {
+    "eia_ultra_low_sulfur_diesel_ny": "EER_EPD2DXL0_PF4_Y35NY_DPG",
+    "eia_ultra_low_sulfur_diesel_usgc": "EER_EPD2DXL0_PF4_RGC_DPG",
+    "eia_heating_oil_ny": "EER_EPD2F_PF4_Y35NY_DPG",
+    "eia_jet_fuel_usgc": "EER_EPJK_PF4_RGC_DPG",
+}
+
+MONTH_ABBR = {
+    "Jan": 1,
+    "Feb": 2,
+    "Mar": 3,
+    "Apr": 4,
+    "May": 5,
+    "Jun": 6,
+    "Jul": 7,
+    "Aug": 8,
+    "Sep": 9,
+    "Oct": 10,
+    "Nov": 11,
+    "Dec": 12,
+}
+
+
+def fetch_datahub_oil_prices(source: str, timeout: int = 30, proxy: ProxyConfig | None = None) -> list[Row]:
+    """Fetch Brent/WTI public CSVs from DataHub's core oil-prices dataset."""
+
+    if source not in DATAHUB_OIL_PRICE_CSV_URLS:
+        raise ValueError(f"DataHub source tidak dikenal: {source}")
+    return fetch_csv_url(
+        DATAHUB_OIL_PRICE_CSV_URLS[source],
+        date_col="Date",
+        price_col="Price",
+        quote_unit="usd_per_bbl",
+        timeout=timeout,
+        proxy=proxy,
+    )
+
+
+def eia_history_url(series_id: str) -> str:
+    return f"https://www.eia.gov/dnav/pet/hist/{series_id}D.htm"
+
+
+def parse_eia_history_html(html_text: str, quote_unit: str = "usd_per_gal") -> list[Row]:
+    """Parse an EIA DNav daily history page into normalized rows."""
+
+    text = html.unescape(re.sub(r"<[^>]+>", " ", html_text))
+    text = re.sub(r"\s+", " ", text)
+    row_pattern = re.compile(
+        r"(?P<year>\d{4})\s+"
+        r"(?P<start_month>[A-Z][a-z]{2})-\s*(?P<start_day>\d{1,2})\s+to\s+"
+        r"(?P<end_month>[A-Z][a-z]{2})-\s*(?P<end_day>\d{1,2})\s+"
+        r"(?P<values>(?:[0-9]+(?:\.[0-9]+)?\s*){1,5})"
+    )
+    rows_by_date: dict[date, float] = {}
+    for match in row_pattern.finditer(text):
+        year = int(match.group("year"))
+        start_month = MONTH_ABBR[match.group("start_month")]
+        start_day = int(match.group("start_day"))
+        current = date(year, start_month, start_day)
+        for raw_value in match.group("values").split():
+            rows_by_date[current] = convert_to_usd_per_bbl(float(raw_value), quote_unit)
+            current += timedelta(days=1)
+            while current.weekday() >= 5:
+                current += timedelta(days=1)
+
+    if not rows_by_date:
+        raise ValueError("Halaman EIA tidak menghasilkan data harga harian yang bisa diparse")
+    return [{DATE_COLUMN: row_date, MOPS_COLUMN: rows_by_date[row_date]} for row_date in sorted(rows_by_date)]
+
+
+def fetch_eia_history(
+    source: str, timeout: int = 30, proxy: ProxyConfig | None = None, quote_unit: str = "usd_per_gal"
+) -> list[Row]:
+    """Fetch a public EIA DNav spot-price history page and normalize to USD/bbl."""
+
+    series_id = EIA_HISTORY_SERIES.get(source, source)
+    html_text = _read_url(eia_history_url(series_id), timeout=timeout, proxy=proxy).decode("utf-8", errors="replace")
+    return parse_eia_history_html(html_text, quote_unit=quote_unit)
 
 
 ORB_SYMBOL_ALIASES = {
@@ -309,6 +455,13 @@ def fetch_public_source(
             url, date_col=date_col, price_col=price_col, quote_unit=quote_unit or "usd_per_bbl", proxy=proxy
         )
 
+    if source in DATAHUB_OIL_PRICE_CSV_URLS:
+        return fetch_datahub_oil_prices(source, proxy=proxy)
+
+    if source in EIA_HISTORY_SERIES:
+        preset = PUBLIC_SOURCES[source]
+        return fetch_eia_history(source, proxy=proxy, quote_unit=quote_unit or preset.default_unit)
+
     if source == "orb_markets":
         return fetch_orb_markets(benchmark=orb_benchmark, proxy=proxy)
 
@@ -331,5 +484,7 @@ def source_help_lines() -> list[str]:
     for source in PUBLIC_SOURCES.values():
         symbol = f" default symbol {source.default_symbol};" if source.default_symbol else ""
         lines.append(f"- {source.key}: {source.label};{symbol} {source.description}")
+    lines.append(f"- DataHub oil-prices: {DATAHUB_OIL_PRICES_URL}")
+    lines.append(f"- EIA spot prices DNav: {EIA_SPOT_PRICES_URL}")
     lines.append("- csv_url: ambil CSV publik dengan parameter --url, --date-col, --price-col, --unit")
     return lines

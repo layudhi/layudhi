@@ -4,11 +4,16 @@ from datetime import date
 import pytest
 
 from gasoil_app.sources import (
+    DATAHUB_OIL_PRICE_CSV_URLS,
+    EIA_HISTORY_SERIES,
     ONLINE_SOURCE_CHOICES,
     convert_to_usd_per_bbl,
     ProxyConfig,
     fetch_csv_url,
+    fetch_datahub_oil_prices,
+    fetch_eia_history,
     fetch_yahoo_chart,
+    parse_eia_history_html,
     parse_orb_markets,
 )
 
@@ -53,6 +58,46 @@ def test_fetch_csv_url_parses_generic_csv(monkeypatch: pytest.MonkeyPatch) -> No
 
     assert [row["mops_usd_per_bbl"] for row in rows] == [100, 105]
 
+
+
+
+def test_fetch_datahub_oil_prices_uses_public_csv(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_read_url(url: str, timeout: int = 30, proxy: ProxyConfig | None = None) -> bytes:
+        assert url == DATAHUB_OIL_PRICE_CSV_URLS["datahub_brent_daily"]
+        return b"Date,Price\n2026-05-01,65.5\n"
+
+    monkeypatch.setattr("gasoil_app.sources._read_url", fake_read_url)
+
+    rows = fetch_datahub_oil_prices("datahub_brent_daily")
+
+    assert rows == [{"date": date(2026, 5, 1), "mops_usd_per_bbl": 65.5}]
+
+
+def test_parse_eia_history_html_converts_product_gallons_to_barrels() -> None:
+    html = """
+    <tr><td>2026 May- 4 to May- 8</td><td>4.091</td><td>4.114</td><td>3.843</td><td>3.926</td><td>3.927</td></tr>
+    <tr><td>2026 May-11 to May-15</td><td>4.051</td><td>4.052</td></tr>
+    """
+
+    rows = parse_eia_history_html(html)
+
+    assert rows[0] == {"date": date(2026, 5, 4), "mops_usd_per_bbl": pytest.approx(4.091 * 42)}
+    assert rows[-1] == {"date": date(2026, 5, 12), "mops_usd_per_bbl": pytest.approx(4.052 * 42)}
+
+
+def test_fetch_eia_history_uses_public_series(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_read_url(url: str, timeout: int = 30, proxy: ProxyConfig | None = None) -> bytes:
+        assert EIA_HISTORY_SERIES["eia_ultra_low_sulfur_diesel_ny"] in url
+        return b"2026 May- 4 to May- 8 4.091 4.114"
+
+    monkeypatch.setattr("gasoil_app.sources._read_url", fake_read_url)
+
+    rows = fetch_eia_history("eia_ultra_low_sulfur_diesel_ny")
+
+    assert rows == [
+        {"date": date(2026, 5, 4), "mops_usd_per_bbl": pytest.approx(4.091 * 42)},
+        {"date": date(2026, 5, 5), "mops_usd_per_bbl": pytest.approx(4.114 * 42)},
+    ]
 
 def test_parse_orb_markets_extracts_heating_oil_proxy() -> None:
     html = "Benchmark Prices Heating Oil HO=F 4.02▲ 0.12 USD/gal Last updated"
@@ -119,6 +164,8 @@ def test_fetch_yahoo_chart_forwards_proxy_config(monkeypatch: pytest.MonkeyPatch
     assert rows == [{"date": date(2025, 1, 1), "mops_usd_per_bbl": 100.0}]
 
 
-def test_online_source_choices_include_orb_markets() -> None:
+def test_online_source_choices_include_public_links() -> None:
     assert "orb_markets" in ONLINE_SOURCE_CHOICES
+    assert "datahub_brent_daily" in ONLINE_SOURCE_CHOICES
+    assert "eia_ultra_low_sulfur_diesel_ny" in ONLINE_SOURCE_CHOICES
     assert "csv_url" in ONLINE_SOURCE_CHOICES

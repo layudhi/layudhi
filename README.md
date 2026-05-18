@@ -18,6 +18,12 @@ CLI dapat mengambil data online langsung:
 - `yahoo_heating_oil`: Yahoo Finance Heating Oil Futures `HO=F`, dikonversi dari `USD/gal` ke `USD/bbl`. Ini proxy publik yang paling dekat dengan distillate/diesel, tetapi bukan MOPS Singapura.
 - `yahoo_brent`: Yahoo Finance Brent Futures `BZ=F` dalam `USD/bbl`. Ini proxy crude oil global.
 - `yahoo_low_sulphur_gasoil`: Yahoo Finance Low Sulphur Gasoil `LGO=F` bila simbol tersedia, dikonversi dari `USD/MT` ke `USD/bbl` dengan faktor 7.46 bbl/MT.
+- `datahub_brent_daily` / `datahub_wti_daily`: CSV publik dari DataHub oil-prices (`https://datahub.io/core/oil-prices`) untuk Brent/WTI harian dalam `USD/bbl`.
+- `datahub_brent_monthly` / `datahub_wti_monthly`: CSV publik dari DataHub oil-prices untuk Brent/WTI bulanan dalam `USD/bbl`.
+- `eia_ultra_low_sulfur_diesel_ny`: halaman publik EIA DNav (`https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm`) untuk Ultra-Low-Sulfur No. 2 Diesel, New York Harbor, dikonversi dari `USD/gal` ke `USD/bbl`.
+- `eia_ultra_low_sulfur_diesel_usgc`: EIA Ultra-Low-Sulfur No. 2 Diesel, U.S. Gulf Coast, dikonversi dari `USD/gal` ke `USD/bbl`.
+- `eia_heating_oil_ny`: EIA No. 2 Heating Oil, New York Harbor, dikonversi dari `USD/gal` ke `USD/bbl`.
+- `eia_jet_fuel_usgc`: EIA Kerosene-Type Jet Fuel, U.S. Gulf Coast, dikonversi dari `USD/gal` ke `USD/bbl`.
 - `csv_url`: URL CSV publik milik Anda, misalnya dari vendor/data portal yang menyediakan kolom tanggal dan harga.
 - `orb_markets`: scraper sederhana untuk halaman markets publik ORB sebagai benchmark indikatif satu titik data.
 
@@ -135,6 +141,21 @@ Contoh Low Sulphur Gasoil futures jika simbol tersedia di Yahoo Finance:
 
 ```bash
 python -m gasoil_app.cli --source yahoo_low_sulphur_gasoil --months 12
+```
+
+Contoh DataHub Brent/WTI public dataset:
+
+```bash
+python -m gasoil_app.cli --source datahub_brent_daily --months 3
+python -m gasoil_app.cli --source datahub_wti_monthly --months 12
+```
+
+Contoh EIA DNav Spot Prices untuk produk diesel/jet fuel publik:
+
+```bash
+python -m gasoil_app.cli --source eia_ultra_low_sulfur_diesel_ny --months 3
+python -m gasoil_app.cli --source eia_ultra_low_sulfur_diesel_usgc --months 3
+python -m gasoil_app.cli --source eia_jet_fuel_usgc --months 3
 ```
 
 Contoh URL CSV publik:
