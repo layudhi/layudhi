@@ -1,0 +1,5 @@
+{% load static %}
+<!doctype html>
+<html lang="id">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>SOP Portal</title><link rel="stylesheet" href="{% static 'sop_portal/style.css' %}"></head>
+<body><nav><a class="brand" href="{% url 'training:dashboard' %}">SOP Portal</a><a href="{% url 'training:document_list' %}">Dokumen</a><a href="{% url 'training:independent_start' %}">Mandiri</a><a href="{% url 'training:event_list' %}">Event</a>{% if user.is_staff %}<a href="{% url 'training:document_upload' %}">Upload Dokumen</a><a href="{% url 'training:upload_users' %}">Upload User</a><a href="{% url 'training:event_create' %}">Buat Event</a>{% endif %}<span class="spacer"></span>{% if user.is_authenticated %}<span>{{ user.username }}</span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button>Logout</button></form>{% else %}<a href="{% url 'login' %}">Login</a>{% endif %}</nav><main>{% for message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main></body></html>

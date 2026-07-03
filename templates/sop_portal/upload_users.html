@@ -1,0 +1,1 @@
+{% extends 'sop_portal/base.html' %}{% block content %}<h1>Upload User</h1><p>CSV mendukung kolom: <code>nama,id badge,departemen,section,divisi</code>.</p><form method="post" enctype="multipart/form-data" class="card-form">{% csrf_token %}{{ form.as_p }}<button>Import User</button></form>{% endblock %}

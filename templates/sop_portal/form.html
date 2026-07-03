@@ -1,0 +1,1 @@
+{% extends 'sop_portal/base.html' %}{% block content %}<h1>{{ title }}</h1><form method="post" enctype="multipart/form-data" class="card-form">{% csrf_token %}{{ form.as_p }}<button>Simpan</button></form>{% endblock %}
