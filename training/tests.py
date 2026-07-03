@@ -39,7 +39,7 @@ class SopPortalTests(TestCase):
         self.client.force_login(staff)
         csv_file = SimpleUploadedFile(
             'users.csv',
-            'nama,id badge,departemen,section,divisi\nBudi,B123,Produksi,A,Factory\n'.encode(),
+            'NAME,IDBadge,SECTION,DEPT\nBudi,B123,A,Produksi\n'.encode(),
             content_type='text/csv',
         )
 
@@ -48,4 +48,7 @@ class SopPortalTests(TestCase):
         self.assertRedirects(response, reverse('training:dashboard'))
         employee = Employee.objects.get(badge_id='B123')
         self.assertEqual(employee.name, 'Budi')
-        self.assertEqual(employee.division, 'Factory')
+        self.assertEqual(employee.department, 'Produksi')
+        self.assertEqual(employee.section, 'A')
+        self.assertEqual(employee.user.username, 'Budi')
+        self.assertTrue(employee.user.check_password('B123'))

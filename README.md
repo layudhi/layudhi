@@ -33,18 +33,24 @@ Admin dapat mengupload data karyawan menggunakan file CSV.
 Format CSV:
 
 ```csv
-nama,id badge,departemen,section,divisi
-Budi Santoso,B12345,Produksi,Line A,Factory 1
-Siti Aminah,B12346,Quality,Incoming,Factory 1
+NAME,IDBadge,SECTION,DEPT
+Budi Santoso,B12345,Line A,Produksi
+Siti Aminah,B12346,Incoming,Quality
 ```
 
 Data yang disimpan:
 
-- nama;
-- ID badge;
-- departemen;
-- section;
-- divisi.
+- `NAME` sebagai nama karyawan sekaligus username login user biasa;
+- `IDBadge` sebagai ID badge sekaligus password awal user biasa;
+- `SECTION` sebagai section;
+- `DEPT` sebagai departemen.
+
+Contoh login user biasa setelah upload CSV:
+
+```text
+Username: Budi Santoso
+Password: B12345
+```
 
 ### 3. Sosialisasi Mandiri
 
@@ -166,7 +172,7 @@ http://127.0.0.1:8000/
 
 ### Untuk User/Karyawan
 
-1. Login menggunakan user yang sudah dibuat dari data ID badge.
+1. Login menggunakan `NAME` sebagai username dan `IDBadge` sebagai password awal.
 2. Buka menu **Mandiri**.
 3. Pilih tema dan materi.
 4. Baca materi sampai bawah.
