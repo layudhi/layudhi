@@ -10,6 +10,7 @@ urlpatterns = [
     path('reports/events/<int:pk>/', views.event_missing_report, name='event_missing_report'),
     path('reports/<str:target_type>/<int:pk>/notify/<int:employee_id>/', views.notify_supervisor, name='notify_supervisor'),
     path('reports/<str:target_type>/<int:pk>/ignore/<int:employee_id>/', views.ignore_missing, name='ignore_missing'),
+    path('reports/<str:target_type>/<int:pk>/download/<str:status>/', views.download_socialization_report, name='download_socialization_report'),
     path('documents/upload/', views.document_upload, name='document_upload'),
     path('mandiri/', views.independent_start, name='independent_start'),
     path('mandiri/<int:pk>/', views.read_document, name='read_document'),

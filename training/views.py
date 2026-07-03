@@ -1,10 +1,13 @@
 import csv
 import io
 
+from django.conf import settings
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -37,6 +40,21 @@ def dashboard(request):
     })
 
 
+
+
+
+def email_uses_console_backend():
+    return settings.EMAIL_BACKEND.endswith('console.EmailBackend')
+
+
+def csv_response(filename, rows):
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.write('﻿')
+    writer = csv.writer(response)
+    for row in rows:
+        writer.writerow(row)
+    return response
 
 
 @login_required
@@ -107,7 +125,10 @@ def notify_supervisor(request, target_type, pk, employee_id):
             subject = f'Pengingat kehadiran event sosialisasi: {target.title}'
             message = f'{employee.name} ({employee.badge_id}) belum mengikuti event sosialisasi {target.title} pada {target.schedule}.'
         send_mail(subject, message, None, [supervisor_email], fail_silently=False)
-        messages.success(request, f'Notifikasi untuk atasan {employee.name} dikirim ke {supervisor_email}.')
+        if email_uses_console_backend():
+            messages.warning(request, 'Email masih memakai mode console/development sehingga tidak masuk inbox. Konfigurasikan SMTP EMAIL_HOST agar email benar-benar terkirim.')
+        else:
+            messages.success(request, f'Notifikasi untuk atasan {employee.name} dikirim ke {supervisor_email}.')
     return redirect('training:document_missing_report' if target_type == 'document' else 'training:event_missing_report', pk=pk)
 
 
@@ -127,6 +148,59 @@ def ignore_missing(request, target_type, pk, employee_id):
         redirect_name = 'training:event_missing_report'
     messages.success(request, f'{employee.name} ditandai N/A untuk {target}.')
     return redirect(redirect_name, pk=pk)
+
+
+@login_required
+@staff_required
+def download_socialization_report(request, target_type, pk, status):
+    rows = [[
+        'Status', 'Metode', 'Nama', 'ID Badge', 'Departemen', 'Section', 'Divisi',
+        'SOP/Materi', 'Tema', 'Event', 'Tempat Event', 'Waktu Event', 'Pembawa Materi',
+        'Waktu Sosialisasi', 'Keterangan'
+    ]]
+    if target_type == 'document':
+        target = get_object_or_404(Document, pk=pk)
+        filename_target = f'document-{target.pk}'
+        if status == 'completed':
+            records = ReadingRecord.objects.filter(document=target).select_related('employee', 'event', 'document').order_by('employee__name', '-completed_at')
+            for record in records:
+                rows.append([
+                    'Sudah', record.get_mode_display(), record.employee.name, record.employee.badge_id,
+                    record.employee.department, record.employee.section, record.employee.division,
+                    target.title, target.theme, record.event.title if record.event else '',
+                    record.event.place if record.event else '', record.event.schedule if record.event else '',
+                    record.event.presenter if record.event else '', record.completed_at, ''
+                ])
+        elif status == 'na':
+            exclusions = SocializationExclusion.objects.filter(document=target, event__isnull=True).select_related('employee')
+            for exclusion in exclusions:
+                rows.append(['N/A', 'N/A', exclusion.employee.name, exclusion.employee.badge_id, exclusion.employee.department, exclusion.employee.section, exclusion.employee.division, target.title, target.theme, '', '', '', '', exclusion.created_at, exclusion.reason])
+        else:
+            missing, _ = missing_for_document(target)
+            for employee in missing:
+                rows.append(['Belum', '', employee.name, employee.badge_id, employee.department, employee.section, employee.division, target.title, target.theme, '', '', '', '', '', 'Belum sosialisasi'])
+    else:
+        target = get_object_or_404(SocializationEvent, pk=pk)
+        filename_target = f'event-{target.pk}'
+        materials = ', '.join(target.materials.values_list('title', flat=True))
+        if status == 'completed':
+            records = ReadingRecord.objects.filter(event=target, mode='EVENT').select_related('employee').order_by('employee__name', '-completed_at')
+            seen = set()
+            for record in records:
+                if record.employee_id in seen:
+                    continue
+                seen.add(record.employee_id)
+                rows.append(['Sudah', record.get_mode_display(), record.employee.name, record.employee.badge_id, record.employee.department, record.employee.section, record.employee.division, materials, '', target.title, target.place, target.schedule, target.presenter, record.completed_at, 'Hadir event'])
+        elif status == 'na':
+            exclusions = SocializationExclusion.objects.filter(event=target, document__isnull=True).select_related('employee')
+            for exclusion in exclusions:
+                rows.append(['N/A', 'N/A', exclusion.employee.name, exclusion.employee.badge_id, exclusion.employee.department, exclusion.employee.section, exclusion.employee.division, materials, '', target.title, target.place, target.schedule, target.presenter, exclusion.created_at, exclusion.reason])
+        else:
+            missing, _ = missing_for_event(target)
+            for employee in missing:
+                rows.append(['Belum', '', employee.name, employee.badge_id, employee.department, employee.section, employee.division, materials, '', target.title, target.place, target.schedule, target.presenter, '', 'Belum hadir event'])
+    return csv_response(f'{filename_target}-{status}.csv', rows)
+
 
 @login_required
 @staff_required

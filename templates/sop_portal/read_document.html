@@ -2,7 +2,8 @@
 {% block content %}
 <h1>{{ document.title }}</h1>
 <p>{{ document.description }}</p>
-<p class="file-actions"><a href="{{ document.file.url }}" target="_blank" rel="noopener">Buka file di tab baru</a></p>
+<p class="file-actions"><a id="open-file-link" href="{{ document.file.url }}" target="_blank" rel="noopener">Buka file di tab baru</a></p>
+<p class="alert alert-warning">Jika preview PDF tidak tampil di browser, klik <b>Buka file di tab baru</b>. Setelah membuka file, tombol selesai akan aktif sehingga Anda tetap bisa mencatat sosialisasi di halaman ini.</p>
 <div class="reader" id="reader">
   <object class="document-viewer" data="{{ document.file.url }}" type="application/pdf">
     <div class="fallback">
@@ -24,6 +25,9 @@ function enableWhenScrolledToBottom() {
   }
 }
 reader.addEventListener('scroll', enableWhenScrolledToBottom);
+document.getElementById('open-file-link').addEventListener('click', () => {
+  btn.disabled = false;
+});
 setTimeout(() => {
   if (reader.scrollHeight <= reader.clientHeight + 10) {
     btn.disabled = false;

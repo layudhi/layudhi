@@ -65,6 +65,26 @@ class SopPortalTests(TestCase):
         self.assertRedirects(ignore_response, reverse('training:document_missing_report', args=[document.pk]))
         self.assertTrue(SocializationExclusion.objects.filter(employee=employee, document=document, reason='Tidak relevan').exists())
 
+
+    def test_download_document_completed_report_includes_method_and_time(self):
+        staff = User.objects.create_user(username='admin', password='pass', is_staff=True)
+        employee = Employee.objects.create(name='Budi', badge_id='B123', department='Produksi', section='A', division='')
+        document = Document.objects.create(
+            title='SOP Download', theme='Safety', file=SimpleUploadedFile('download.txt', b'download'),
+            valid_from=timezone.localdate(), valid_until=timezone.localdate() + timedelta(days=10),
+        )
+        ReadingRecord.objects.create(employee=employee, document=document, mode='MANDIRI')
+        self.client.force_login(staff)
+
+        response = self.client.get(reverse('training:download_socialization_report', args=['document', document.pk, 'completed']))
+
+        self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8')
+        body = response.content.decode('utf-8-sig')
+        self.assertIn('Metode', body)
+        self.assertIn('Sosialisasi Mandiri', body)
+        self.assertIn('Waktu Sosialisasi', body)
+        self.assertIn('SOP Download', body)
+
     def test_event_missing_report_excludes_attendees_and_na_users(self):
         staff = User.objects.create_user(username='admin', password='pass', is_staff=True)
         missing = Employee.objects.create(name='Missing', badge_id='B001', department='QA', section='A', division='')

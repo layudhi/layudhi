@@ -87,7 +87,8 @@ Admin/staff dapat membuka menu **Belum Sosialisasi** untuk:
 - memilih laporan per event;
 - melihat daftar user yang belum sosialisasi;
 - mengirim notifikasi email ke atasan dengan input alamat email atasan;
-- menandai user sebagai `N/A` jika user tidak relevan dengan SOP/materi atau event tersebut.
+- menandai user sebagai `N/A` jika user tidak relevan dengan SOP/materi atau event tersebut;
+- download daftar user yang belum sosialisasi, sudah sosialisasi, dan N/A dalam format CSV lengkap dengan metode Mandiri/Event, waktu sosialisasi, detail event, dan keterangan.
 
 User yang ditandai `N/A` tetap tersimpan di database sebagai pengecualian dan tidak lagi muncul di daftar user yang belum sosialisasi untuk target tersebut.
 
@@ -217,4 +218,5 @@ Sebelum digunakan di lingkungan produksi:
 - batasi `ALLOWED_HOSTS`;
 - siapkan konfigurasi static dan media file;
 - siapkan backup database;
+- konfigurasikan SMTP email dengan environment variable `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, dan `DEFAULT_FROM_EMAIL` agar notifikasi benar-benar masuk inbox;
 - pastikan akses file dokumen sesuai kebijakan keamanan perusahaan.

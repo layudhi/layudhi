@@ -9,6 +9,12 @@
   {% endif %}
 </div>
 
+<div class="download-actions">
+  <a class="button-link" href="{% url 'training:download_socialization_report' target_type target.pk 'missing' %}">Download Belum Sosialisasi</a>
+  <a class="button-link" href="{% url 'training:download_socialization_report' target_type target.pk 'completed' %}">Download Sudah Sosialisasi</a>
+  <a class="button-link secondary-link" href="{% url 'training:download_socialization_report' target_type target.pk 'na' %}">Download N/A</a>
+</div>
+
 <h2>Belum Sosialisasi</h2>
 <table>
   <tr><th>Nama</th><th>ID Badge</th><th>Departemen</th><th>Section</th><th>Email Atasan</th><th>Ignore / N/A</th></tr>
