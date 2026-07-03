@@ -77,7 +77,26 @@ class SopPortalTests(TestCase):
         self.assertIn('Metode', sheet)
         self.assertIn('Sosialisasi Mandiri', sheet)
         self.assertIn('Waktu Sosialisasi', sheet)
+        self.assertIn('UTC+8', sheet)
         self.assertIn('SOP Download', sheet)
+
+
+    def test_dashboard_shows_section_compliance(self):
+        staff = User.objects.create_user(username='admin', password='pass', is_staff=True)
+        employee = Employee.objects.create(name='Budi', badge_id='B123', department='Produksi', section='Line A', division='')
+        pending = Employee.objects.create(name='Siti', badge_id='B124', department='Produksi', section='Line A', division='')
+        document = Document.objects.create(
+            title='SOP Section', theme='Safety', file=SimpleUploadedFile('section.txt', b'section'),
+            valid_from=timezone.localdate(), valid_until=timezone.localdate() + timedelta(days=10),
+        )
+        ReadingRecord.objects.create(employee=employee, document=document, mode='MANDIRI')
+        self.client.force_login(staff)
+
+        response = self.client.get(reverse('training:dashboard'))
+
+        self.assertContains(response, 'Tingkat Kepatuhan Berdasarkan Section')
+        self.assertContains(response, 'Line A')
+        self.assertContains(response, '50%')
 
     def test_event_missing_report_excludes_attendees_and_na_users(self):
         staff = User.objects.create_user(username='admin', password='pass', is_staff=True)

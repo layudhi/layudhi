@@ -1,6 +1,7 @@
 import csv
 import io
 import zipfile
+from zoneinfo import ZoneInfo
 from xml.sax.saxutils import escape
 
 
@@ -32,8 +33,22 @@ def row_value(row, *keys):
 def dashboard(request):
     active_documents = Document.objects.filter(valid_from__lte=timezone.localdate(), valid_until__gte=timezone.localdate())
     employees_count = Employee.objects.count()
-    socialized_users_count = ReadingRecord.objects.values('employee_id').distinct().count()
+    socialized_user_ids = set(ReadingRecord.objects.values_list('employee_id', flat=True).distinct())
+    socialized_users_count = len(socialized_user_ids)
     chart_max = max(Document.objects.count(), active_documents.count(), employees_count, socialized_users_count, 1)
+    section_rows = []
+    sections = Employee.objects.values_list('section', flat=True).distinct().order_by('section')
+    for section in sections:
+        section_employees = Employee.objects.filter(section=section)
+        total = section_employees.count()
+        completed = section_employees.filter(id__in=socialized_user_ids).count()
+        section_rows.append({
+            'section': section or '-',
+            'total': total,
+            'completed': completed,
+            'pending': total - completed,
+            'percent': int(completed / total * 100) if total else 0,
+        })
     return render(request, 'sop_portal/dashboard.html', {
         'documents_count': Document.objects.count(),
         'active_documents_count': active_documents.count(),
@@ -43,6 +58,7 @@ def dashboard(request):
         'active_documents_percent': int(active_documents.count() / chart_max * 100),
         'employees_percent': int(employees_count / chart_max * 100),
         'socialized_users_percent': int(socialized_users_count / chart_max * 100),
+        'section_compliance': section_rows,
         'events': SocializationEvent.objects.select_related().all()[:5],
         'recent_records': ReadingRecord.objects.select_related('employee', 'document', 'event')[:8],
     })
@@ -57,6 +73,14 @@ def column_name(index):
         index, remainder = divmod(index - 1, 26)
         name = chr(65 + remainder) + name
     return name
+
+
+def format_utc8(value):
+    if not value:
+        return ''
+    if hasattr(value, 'astimezone'):
+        return value.astimezone(ZoneInfo('Asia/Makassar')).strftime('%Y-%m-%d %H:%M:%S UTC+8')
+    return str(value)
 
 
 def xlsx_response(filename, rows):
@@ -171,13 +195,13 @@ def download_socialization_report(request, target_type, pk, status):
                     'Sudah', record.get_mode_display(), record.employee.name, record.employee.badge_id,
                     record.employee.department, record.employee.section, record.employee.division,
                     target.title, target.theme, record.event.title if record.event else '',
-                    record.event.place if record.event else '', record.event.schedule if record.event else '',
-                    record.event.presenter if record.event else '', record.completed_at, ''
+                    record.event.place if record.event else '', format_utc8(record.event.schedule) if record.event else '',
+                    record.event.presenter if record.event else '', format_utc8(record.completed_at), ''
                 ])
         elif status == 'na':
             exclusions = SocializationExclusion.objects.filter(document=target, event__isnull=True).select_related('employee')
             for exclusion in exclusions:
-                rows.append(['N/A', 'N/A', exclusion.employee.name, exclusion.employee.badge_id, exclusion.employee.department, exclusion.employee.section, exclusion.employee.division, target.title, target.theme, '', '', '', '', exclusion.created_at, exclusion.reason])
+                rows.append(['N/A', 'N/A', exclusion.employee.name, exclusion.employee.badge_id, exclusion.employee.department, exclusion.employee.section, exclusion.employee.division, target.title, target.theme, '', '', '', '', format_utc8(exclusion.created_at), exclusion.reason])
         else:
             missing, _ = missing_for_document(target)
             for employee in missing:
@@ -193,15 +217,15 @@ def download_socialization_report(request, target_type, pk, status):
                 if record.employee_id in seen:
                     continue
                 seen.add(record.employee_id)
-                rows.append(['Sudah', record.get_mode_display(), record.employee.name, record.employee.badge_id, record.employee.department, record.employee.section, record.employee.division, materials, '', target.title, target.place, target.schedule, target.presenter, record.completed_at, 'Hadir event'])
+                rows.append(['Sudah', record.get_mode_display(), record.employee.name, record.employee.badge_id, record.employee.department, record.employee.section, record.employee.division, materials, '', target.title, target.place, format_utc8(target.schedule), target.presenter, format_utc8(record.completed_at), 'Hadir event'])
         elif status == 'na':
             exclusions = SocializationExclusion.objects.filter(event=target, document__isnull=True).select_related('employee')
             for exclusion in exclusions:
-                rows.append(['N/A', 'N/A', exclusion.employee.name, exclusion.employee.badge_id, exclusion.employee.department, exclusion.employee.section, exclusion.employee.division, materials, '', target.title, target.place, target.schedule, target.presenter, exclusion.created_at, exclusion.reason])
+                rows.append(['N/A', 'N/A', exclusion.employee.name, exclusion.employee.badge_id, exclusion.employee.department, exclusion.employee.section, exclusion.employee.division, materials, '', target.title, target.place, format_utc8(target.schedule), target.presenter, format_utc8(exclusion.created_at), exclusion.reason])
         else:
             missing, _ = missing_for_event(target)
             for employee in missing:
-                rows.append(['Belum', '', employee.name, employee.badge_id, employee.department, employee.section, employee.division, materials, '', target.title, target.place, target.schedule, target.presenter, '', 'Belum hadir event'])
+                rows.append(['Belum', '', employee.name, employee.badge_id, employee.department, employee.section, employee.division, materials, '', target.title, target.place, format_utc8(target.schedule), target.presenter, '', 'Belum hadir event'])
     return xlsx_response(f'{filename_target}-{status}.xlsx', rows)
 
 

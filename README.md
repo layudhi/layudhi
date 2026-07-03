@@ -87,7 +87,7 @@ Admin/staff dapat membuka menu **Belum Sosialisasi** untuk:
 - memilih laporan per event;
 - melihat daftar user yang belum sosialisasi;
 - menandai user sebagai `N/A` jika user tidak relevan dengan SOP/materi atau event tersebut;
-- download daftar user yang belum sosialisasi, sudah sosialisasi, dan N/A dalam format Excel lengkap dengan metode Mandiri/Event, waktu sosialisasi, detail event, dan keterangan.
+- download daftar user yang belum sosialisasi, sudah sosialisasi, dan N/A dalam format Excel lengkap dengan metode Mandiri/Event, waktu sosialisasi format UTC+8, detail event, dan keterangan.
 
 User yang ditandai `N/A` tetap tersimpan di database sebagai pengecualian dan tidak lagi muncul di daftar user yang belum sosialisasi untuk target tersebut.
 
@@ -100,6 +100,7 @@ Dashboard menampilkan:
 - total user/karyawan;
 - total user yang sudah mengikuti sosialisasi;
 - grafik ringkasan untuk laporan Manager;
+- tingkat kepatuhan berdasarkan section;
 - shortcut ke sosialisasi mandiri;
 - shortcut ke daftar event;
 - riwayat sosialisasi terbaru.
