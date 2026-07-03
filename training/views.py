@@ -4,7 +4,6 @@ import io
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
-from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -15,6 +14,15 @@ from .models import Document, Employee, ReadingRecord, SocializationEvent
 
 def staff_required(view_func):
     return user_passes_test(lambda user: user.is_staff)(view_func)
+
+
+def row_value(row, *keys):
+    normalized = {key.strip().lower().replace('_', '').replace(' ', ''): (value or '').strip() for key, value in row.items()}
+    for key in keys:
+        value = normalized.get(key.strip().lower().replace('_', '').replace(' ', ''))
+        if value:
+            return value
+    return ''
 
 
 def dashboard(request):
@@ -101,19 +109,25 @@ def upload_users(request):
     if request.method == 'POST' and form.is_valid():
         text = form.cleaned_data['csv_file'].read().decode('utf-8-sig')
         for row in csv.DictReader(io.StringIO(text)):
-            badge = row.get('id badge') or row.get('badge_id') or row.get('id_badge')
-            name = row.get('nama') or row.get('name')
+            name = row_value(row, 'NAME', 'nama', 'name')
+            badge = row_value(row, 'IDBadge', 'id badge', 'badge_id', 'id_badge')
+            section = row_value(row, 'SECTION', 'section')
+            department = row_value(row, 'DEPT', 'departemen', 'department')
+            division = row_value(row, 'DIVISI', 'division')
             if not badge or not name:
                 continue
-            user, _ = User.objects.get_or_create(username=badge, defaults={'first_name': name})
+            user, _ = User.objects.get_or_create(username=name, defaults={'first_name': name})
+            user.first_name = name
+            user.set_password(badge)
+            user.save(update_fields=['first_name', 'password'])
             Employee.objects.update_or_create(
                 badge_id=badge,
                 defaults={
                     'user': user,
                     'name': name,
-                    'department': row.get('departemen') or row.get('department') or '',
-                    'section': row.get('section') or '',
-                    'division': row.get('divisi') or row.get('division') or '',
+                    'department': department,
+                    'section': section,
+                    'division': division,
                 },
             )
             imported += 1
