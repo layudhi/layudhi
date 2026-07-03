@@ -1,7 +1,8 @@
 from datetime import timedelta
+import io
+import zipfile
 
 from django.contrib.auth.models import User
-from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -37,8 +38,7 @@ class SopPortalTests(TestCase):
 
 
 
-    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
-    def test_document_missing_report_can_notify_and_ignore_employee(self):
+    def test_document_missing_report_can_ignore_employee(self):
         staff = User.objects.create_user(username='admin', password='pass', is_staff=True)
         employee = Employee.objects.create(name='Budi', badge_id='B123', department='Produksi', section='A', division='')
         document = Document.objects.create(
@@ -49,14 +49,7 @@ class SopPortalTests(TestCase):
 
         report_response = self.client.get(reverse('training:document_missing_report', args=[document.pk]))
         self.assertContains(report_response, employee.name)
-
-        notify_response = self.client.post(
-            reverse('training:notify_supervisor', args=['document', document.pk, employee.pk]),
-            {'supervisor_email': 'atasan@example.com'},
-        )
-        self.assertRedirects(notify_response, reverse('training:document_missing_report', args=[document.pk]))
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn('SOP Wajib', mail.outbox[0].subject)
+        self.assertNotContains(report_response, 'Kirim Email')
 
         ignore_response = self.client.post(
             reverse('training:ignore_missing', args=['document', document.pk, employee.pk]),
@@ -78,12 +71,13 @@ class SopPortalTests(TestCase):
 
         response = self.client.get(reverse('training:download_socialization_report', args=['document', document.pk, 'completed']))
 
-        self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8')
-        body = response.content.decode('utf-8-sig')
-        self.assertIn('Metode', body)
-        self.assertIn('Sosialisasi Mandiri', body)
-        self.assertIn('Waktu Sosialisasi', body)
-        self.assertIn('SOP Download', body)
+        self.assertEqual(response['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        with zipfile.ZipFile(io.BytesIO(response.content)) as workbook:
+            sheet = workbook.read('xl/worksheets/sheet1.xml').decode()
+        self.assertIn('Metode', sheet)
+        self.assertIn('Sosialisasi Mandiri', sheet)
+        self.assertIn('Waktu Sosialisasi', sheet)
+        self.assertIn('SOP Download', sheet)
 
     def test_event_missing_report_excludes_attendees_and_na_users(self):
         staff = User.objects.create_user(username='admin', password='pass', is_staff=True)
@@ -154,6 +148,21 @@ class SopPortalTests(TestCase):
 
         self.assertRedirects(response, reverse('training:event_detail', args=[event.pk]))
         self.assertFalse(ReadingRecord.objects.filter(employee=employee, event=event, mode='EVENT').exists())
+
+
+    def test_independent_theme_dropdown_shows_unique_themes(self):
+        user = User.objects.create_user(username='Budi', password='B123')
+        Employee.objects.create(user=user, name='Budi', badge_id='B123', department='Produksi', section='A', division='')
+        for index in range(3):
+            Document.objects.create(
+                title=f'SOP Investigasi {index}', theme='Sosialisasi Hasil Investigasi', file=SimpleUploadedFile(f'sop-{index}.txt', b'sop'),
+                valid_from=timezone.localdate(), valid_until=timezone.localdate() + timedelta(days=10),
+            )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse('training:independent_start'))
+
+        self.assertContains(response, '<option >Sosialisasi Hasil Investigasi</option>', count=1, html=True)
 
     def test_media_url_is_root_relative_for_document_preview(self):
         document = Document.objects.create(

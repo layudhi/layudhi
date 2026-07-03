@@ -1,12 +1,12 @@
 import csv
 import io
+import zipfile
+from xml.sax.saxutils import escape
 
-from django.conf import settings
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -31,10 +31,18 @@ def row_value(row, *keys):
 
 def dashboard(request):
     active_documents = Document.objects.filter(valid_from__lte=timezone.localdate(), valid_until__gte=timezone.localdate())
+    employees_count = Employee.objects.count()
+    socialized_users_count = ReadingRecord.objects.values('employee_id').distinct().count()
+    chart_max = max(Document.objects.count(), active_documents.count(), employees_count, socialized_users_count, 1)
     return render(request, 'sop_portal/dashboard.html', {
         'documents_count': Document.objects.count(),
         'active_documents_count': active_documents.count(),
-        'employees_count': Employee.objects.count(),
+        'employees_count': employees_count,
+        'socialized_users_count': socialized_users_count,
+        'documents_percent': int(Document.objects.count() / chart_max * 100),
+        'active_documents_percent': int(active_documents.count() / chart_max * 100),
+        'employees_percent': int(employees_count / chart_max * 100),
+        'socialized_users_percent': int(socialized_users_count / chart_max * 100),
         'events': SocializationEvent.objects.select_related().all()[:5],
         'recent_records': ReadingRecord.objects.select_related('employee', 'document', 'event')[:8],
     })
@@ -43,17 +51,37 @@ def dashboard(request):
 
 
 
-def email_uses_console_backend():
-    return settings.EMAIL_BACKEND.endswith('console.EmailBackend')
+def column_name(index):
+    name = ''
+    while index:
+        index, remainder = divmod(index - 1, 26)
+        name = chr(65 + remainder) + name
+    return name
 
 
-def csv_response(filename, rows):
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
+def xlsx_response(filename, rows):
+    output = io.BytesIO()
+    sheet_rows = []
+    for row_index, row in enumerate(rows, start=1):
+        cells = []
+        for column_index, value in enumerate(row, start=1):
+            cell_ref = f'{column_name(column_index)}{row_index}'
+            text = escape('' if value is None else str(value))
+            cells.append(f'<c r="{cell_ref}" t="inlineStr"><is><t>{text}</t></is></c>')
+        sheet_rows.append(f'<row r="{row_index}">{''.join(cells)}</row>')
+    worksheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' + ''.join(sheet_rows) + '</sheetData></worksheet>'
+    workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Report" sheetId="1" r:id="rId1"/></sheets></workbook>'
+    rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'
+    workbook_rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'
+    content_types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'
+    with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as workbook_zip:
+        workbook_zip.writestr('[Content_Types].xml', content_types)
+        workbook_zip.writestr('_rels/.rels', rels)
+        workbook_zip.writestr('xl/workbook.xml', workbook)
+        workbook_zip.writestr('xl/_rels/workbook.xml.rels', workbook_rels)
+        workbook_zip.writestr('xl/worksheets/sheet1.xml', worksheet)
+    response = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    response.write('﻿')
-    writer = csv.writer(response)
-    for row in rows:
-        writer.writerow(row)
     return response
 
 
@@ -105,31 +133,6 @@ def event_missing_report(request, pk):
         'missing_employees': missing,
         'excluded_records': excluded,
     })
-
-
-@login_required
-@staff_required
-@require_POST
-def notify_supervisor(request, target_type, pk, employee_id):
-    employee = get_object_or_404(Employee, pk=employee_id)
-    supervisor_email = request.POST.get('supervisor_email', '').strip()
-    if not supervisor_email:
-        messages.error(request, 'Alamat email atasan wajib diisi.')
-    else:
-        if target_type == 'document':
-            target = get_object_or_404(Document, pk=pk)
-            subject = f'Pengingat sosialisasi SOP: {target.title}'
-            message = f'{employee.name} ({employee.badge_id}) belum melakukan sosialisasi untuk dokumen {target.title}.'
-        else:
-            target = get_object_or_404(SocializationEvent, pk=pk)
-            subject = f'Pengingat kehadiran event sosialisasi: {target.title}'
-            message = f'{employee.name} ({employee.badge_id}) belum mengikuti event sosialisasi {target.title} pada {target.schedule}.'
-        send_mail(subject, message, None, [supervisor_email], fail_silently=False)
-        if email_uses_console_backend():
-            messages.warning(request, 'Email masih memakai mode console/development sehingga tidak masuk inbox. Konfigurasikan SMTP EMAIL_HOST agar email benar-benar terkirim.')
-        else:
-            messages.success(request, f'Notifikasi untuk atasan {employee.name} dikirim ke {supervisor_email}.')
-    return redirect('training:document_missing_report' if target_type == 'document' else 'training:event_missing_report', pk=pk)
 
 
 @login_required
@@ -199,7 +202,7 @@ def download_socialization_report(request, target_type, pk, status):
             missing, _ = missing_for_event(target)
             for employee in missing:
                 rows.append(['Belum', '', employee.name, employee.badge_id, employee.department, employee.section, employee.division, materials, '', target.title, target.place, target.schedule, target.presenter, '', 'Belum hadir event'])
-    return csv_response(f'{filename_target}-{status}.csv', rows)
+    return xlsx_response(f'{filename_target}-{status}.xlsx', rows)
 
 
 @login_required
@@ -224,7 +227,7 @@ def document_list(request):
 @login_required
 def independent_start(request):
     documents = Document.objects.filter(valid_from__lte=timezone.localdate(), valid_until__gte=timezone.localdate())
-    themes = documents.values_list('theme', flat=True).distinct()
+    themes = documents.order_by('theme').values_list('theme', flat=True).distinct()
     selected_theme = request.GET.get('theme')
     if selected_theme:
         documents = documents.filter(theme=selected_theme)

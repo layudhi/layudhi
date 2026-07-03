@@ -86,9 +86,8 @@ Admin/staff dapat membuka menu **Belum Sosialisasi** untuk:
 - memilih laporan per SOP/materi;
 - memilih laporan per event;
 - melihat daftar user yang belum sosialisasi;
-- mengirim notifikasi email ke atasan dengan input alamat email atasan;
 - menandai user sebagai `N/A` jika user tidak relevan dengan SOP/materi atau event tersebut;
-- download daftar user yang belum sosialisasi, sudah sosialisasi, dan N/A dalam format CSV lengkap dengan metode Mandiri/Event, waktu sosialisasi, detail event, dan keterangan.
+- download daftar user yang belum sosialisasi, sudah sosialisasi, dan N/A dalam format Excel lengkap dengan metode Mandiri/Event, waktu sosialisasi, detail event, dan keterangan.
 
 User yang ditandai `N/A` tetap tersimpan di database sebagai pengecualian dan tidak lagi muncul di daftar user yang belum sosialisasi untuk target tersebut.
 
@@ -99,6 +98,8 @@ Dashboard menampilkan:
 - total dokumen;
 - total dokumen aktif;
 - total user/karyawan;
+- total user yang sudah mengikuti sosialisasi;
+- grafik ringkasan untuk laporan Manager;
 - shortcut ke sosialisasi mandiri;
 - shortcut ke daftar event;
 - riwayat sosialisasi terbaru.
@@ -182,7 +183,7 @@ http://127.0.0.1:8000/
 3. Buka menu **Upload User** untuk import data karyawan dari CSV.
 4. Buka menu **Buat Event** jika ingin membuat jadwal sosialisasi event.
 5. Buka menu **Belum Sosialisasi** untuk monitoring per SOP atau per event.
-6. Gunakan tombol email untuk mengingatkan atasan user yang belum ikut sosialisasi.
+6. Download laporan Excel untuk daftar belum sosialisasi, sudah sosialisasi, atau N/A.
 7. Gunakan tombol N/A jika user tidak relevan dengan SOP/materi atau event tersebut.
 8. Gunakan Django Admin untuk pengelolaan data lanjutan.
 
@@ -218,5 +219,4 @@ Sebelum digunakan di lingkungan produksi:
 - batasi `ALLOWED_HOSTS`;
 - siapkan konfigurasi static dan media file;
 - siapkan backup database;
-- konfigurasikan SMTP email dengan environment variable `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, dan `DEFAULT_FROM_EMAIL` agar notifikasi benar-benar masuk inbox;
 - pastikan akses file dokumen sesuai kebijakan keamanan perusahaan.
