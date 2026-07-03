@@ -1,206 +1,205 @@
-# Gasoil MOPS Singapore Checker & Forecast
+# SOP Portal - Aplikasi Sosialisasi Dokumen Perusahaan
 
-Aplikasi Python siap pakai untuk:
+SOP Portal adalah aplikasi web berbasis **Python Django** dan **SQLite** untuk mengelola dokumen perusahaan, data karyawan, sosialisasi mandiri, dan event sosialisasi.
 
-- mengambil data harga online dari sumber publik/proxy ketika Anda belum memiliki data MOPS;
-- membaca data **MOPS Singapura** jika Anda sudah punya CSV resmi/berlisensi;
-- mengonversi harga `USD/barrel` menjadi estimasi `IDR/liter` dengan parameter kurs, alpha/premium, freight, distribusi, pajak, dan subsidi;
-- membuat prediksi harga gasoil ke depan untuk 1 bulan, 2 bulan, 3 bulan, 12 bulan, atau horizon lain melalui CLI.
+## Ringkasan
 
-> Penting: MOPS resmi adalah assessment berlisensi dari Platts/S&P Global. Aplikasi ini tidak membobol paywall dan tidak scraping data berlisensi secara ilegal. Jika belum punya MOPS, gunakan sumber publik/proxy seperti Heating Oil futures, Brent futures, ICE Low Sulphur Gasoil futures bila tersedia, atau URL CSV publik lain. Hasil proxy bukan MOPS resmi dan harus divalidasi sebelum keputusan komersial.
+Aplikasi ini dibuat untuk kebutuhan sosialisasi SOP, materi kerja, instruksi kerja, kebijakan, dan dokumen internal perusahaan. Admin dapat mengupload dokumen dan menentukan masa berlaku dokumen. Karyawan hanya dapat memilih dokumen yang masih aktif untuk dibaca atau disosialisasikan.
 
-## Sumber data yang didukung
+## Fitur Utama
 
-### 1. Online publik/proxy
+### 1. Manajemen Dokumen
 
-CLI dapat mengambil data online langsung:
+Admin dapat mengelola dokumen perusahaan dengan informasi:
 
-- `yahoo_heating_oil`: Yahoo Finance Heating Oil Futures `HO=F`, dikonversi dari `USD/gal` ke `USD/bbl`. Ini proxy publik yang paling dekat dengan distillate/diesel, tetapi bukan MOPS Singapura.
-- `yahoo_brent`: Yahoo Finance Brent Futures `BZ=F` dalam `USD/bbl`. Ini proxy crude oil global.
-- `yahoo_low_sulphur_gasoil`: Yahoo Finance Low Sulphur Gasoil `LGO=F` bila simbol tersedia, dikonversi dari `USD/MT` ke `USD/bbl` dengan faktor 7.46 bbl/MT.
-- `csv_url`: URL CSV publik milik Anda, misalnya dari vendor/data portal yang menyediakan kolom tanggal dan harga.
-- `orb_markets`: scraper sederhana untuk halaman markets publik ORB sebagai benchmark indikatif satu titik data.
+- judul dokumen;
+- tema dokumen;
+- deskripsi singkat;
+- file dokumen;
+- tanggal mulai berlaku;
+- tanggal expired.
 
-### 2. CSV MOPS resmi/berlisensi
+Aturan dokumen:
 
-Jika Anda sudah punya data MOPS, gunakan CSV lokal dengan kolom wajib:
+- dokumen aktif dapat dipilih untuk sosialisasi;
+- dokumen expired tidak dapat dipilih lagi untuk sosialisasi mandiri;
+- dokumen expired tidak muncul sebagai pilihan materi saat membuat event baru;
+- dokumen expired tetap tersimpan sebagai arsip.
+
+### 2. Manajemen User/Karyawan
+
+Admin dapat mengupload data karyawan menggunakan file CSV.
+
+Format CSV:
 
 ```csv
-date,mops_usd_per_bbl
-2025-01-01,96.20
-2025-02-01,94.75
+NAME,IDBadge,SECTION,DEPT
+Budi Santoso,B12345,Line A,Produksi
+Siti Aminah,B12346,Incoming,Quality
 ```
 
-- `date`: tanggal observasi; boleh harian, mingguan, atau bulanan.
-- `mops_usd_per_bbl`: harga gasoil MOPS Singapura dalam USD/barrel.
+Data yang disimpan:
 
-Contoh data lokal tersedia di [`examples/mops_sample.csv`](examples/mops_sample.csv).
+- `NAME` sebagai nama karyawan sekaligus username login user biasa;
+- `IDBadge` sebagai ID badge sekaligus password awal user biasa;
+- `SECTION` sebagai section;
+- `DEPT` sebagai departemen.
+
+Contoh login user biasa setelah upload CSV:
+
+```text
+Username: Budi Santoso
+Password: B12345
+```
+
+### 3. Sosialisasi Mandiri
+
+Alur sosialisasi mandiri:
+
+1. user login ke aplikasi;
+2. user membuka menu **Mandiri**;
+3. user memilih tema;
+4. user memilih materi yang masih aktif;
+5. aplikasi menampilkan materi;
+6. user wajib scroll sampai bawah;
+7. tombol selesai baru aktif setelah user scroll sampai bawah;
+8. sistem mencatat bahwa user sudah membaca dan sudah tersosialisasi.
+
+### 4. Sosialisasi Event
+
+Admin dapat membuat event sosialisasi dengan data:
+
+- judul event;
+- divisi peserta;
+- tempat pelaksanaan;
+- waktu pelaksanaan;
+- nama pembawa materi;
+- daftar materi yang disosialisasikan;
+- catatan tambahan.
+
+Materi event hanya dapat dipilih dari dokumen yang masih aktif.
+
+### 5. Dashboard
+
+Dashboard menampilkan:
+
+- total dokumen;
+- total dokumen aktif;
+- total user/karyawan;
+- shortcut ke sosialisasi mandiri;
+- shortcut ke daftar event;
+- riwayat sosialisasi terbaru.
+
+## Struktur Aplikasi
+
+```text
+manage.py
+sop_portal/
+  settings.py
+  urls.py
+  asgi.py
+  wsgi.py
+training/
+  admin.py
+  forms.py
+  models.py
+  urls.py
+  views.py
+  migrations/
+templates/sop_portal/
+static/sop_portal/
+media/documents/
+```
+
+Keterangan singkat:
+
+- `sop_portal/` berisi konfigurasi project Django;
+- `training/` berisi fitur utama aplikasi SOP Portal;
+- `templates/sop_portal/` berisi halaman HTML;
+- `static/sop_portal/` berisi styling CSS;
+- `media/documents/` digunakan untuk menyimpan file dokumen yang diupload.
 
 ## Instalasi
+
+Buat virtual environment:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
+```
+
+Install dependency:
+
+```bash
 pip install -r requirements.txt
 ```
 
-> Core CLI hanya memakai Python standard library. `streamlit` dan `pandas` diperlukan untuk aplikasi web.
-
-## Menjalankan aplikasi web
-
-Dari folder root repository, jalankan salah satu perintah berikut:
+Siapkan database:
 
 ```bash
-streamlit run gasoil_app/app.py
+python manage.py migrate
 ```
 
-Atau, di Windows/PowerShell jika perintah `streamlit` belum masuk `PATH`:
-
-```powershell
-python -m streamlit run gasoil_app/app.py
-```
-
-`app.py` juga sudah dibuat aman dari error `attempted relative import with no known parent package` saat dijalankan langsung dari path file. Namun untuk pengalaman web yang benar, tetap disarankan menjalankannya melalui `streamlit run` atau `python -m streamlit run`.
-
-Di sidebar, pilih:
-
-1. **Ambil online** jika ingin otomatis mengambil proxy publik; atau
-2. **Upload CSV** jika sudah punya data MOPS/vendor.
-
-Aplikasi akan menampilkan data sumber, riwayat bulanan, estimasi harga IDR/liter, prediksi, grafik, dan tombol download forecast.
-
-
-## Jaringan kantor dengan login proxy
-
-Jika internet kantor membutuhkan proxy/login, ada dua cara yang didukung.
-
-### Opsi A: lewat environment variable
-
-Cara ini lebih aman karena password tidak muncul di argumen command history:
+Buat user admin:
 
 ```bash
-export HTTPS_PROXY="http://proxy.company.local:8080"
-export HTTP_PROXY="http://proxy.company.local:8080"
-export GASOIL_PROXY_USER="DOMAIN\username"
-export GASOIL_PROXY_PASSWORD="password-proxy-anda"
-
-python -m gasoil_app.cli --source yahoo_heating_oil --months 3
+python manage.py createsuperuser
 ```
 
-Jika proxy Anda menerima credential langsung di URL, format ini juga bisa dipakai:
+## Menjalankan Aplikasi
+
+Jalankan server Django:
 
 ```bash
-export HTTPS_PROXY="http://DOMAIN%5Cusername:password@proxy.company.local:8080"
-python -m gasoil_app.cli --source yahoo_heating_oil --months 3
+python manage.py runserver
 ```
 
-### Opsi B: lewat argumen CLI
-
-```bash
-python -m gasoil_app.cli \
-  --source yahoo_heating_oil \
-  --proxy-url "http://proxy.company.local:8080" \
-  --proxy-user "DOMAIN\username" \
-  --proxy-password "password-proxy-anda" \
-  --months 3
-```
-
-Untuk Streamlit, isi bagian **Proxy Kantor** di sidebar, atau jalankan Streamlit setelah environment variable di atas di-set.
-
-Jika ingin memastikan aplikasi tidak memakai proxy environment, tambahkan `--no-proxy` pada CLI.
-
-## Menjalankan dari CLI tanpa data MOPS
-
-Contoh mengambil Heating Oil futures publik sebagai proxy diesel/gasoil:
-
-```bash
-python -m gasoil_app.cli \
-  --source yahoo_heating_oil \
-  --months 3 \
-  --fx 16000 \
-  --alpha 1.5 \
-  --freight 2.0 \
-  --distribution 500 \
-  --tax 11 \
-  --output outputs
-```
-
-Contoh Brent futures sebagai proxy crude:
-
-```bash
-python -m gasoil_app.cli --source yahoo_brent --months 12
-```
-
-Contoh Low Sulphur Gasoil futures jika simbol tersedia di Yahoo Finance:
-
-```bash
-python -m gasoil_app.cli --source yahoo_low_sulphur_gasoil --months 12
-```
-
-Contoh URL CSV publik:
-
-```bash
-python -m gasoil_app.cli \
-  --source csv_url \
-  --url "https://contoh-domain/data.csv" \
-  --date-col Date \
-  --price-col Close \
-  --unit usd_per_bbl \
-  --months 3
-```
-
-## Menjalankan dari CLI dengan CSV lokal
-
-```bash
-python -m gasoil_app.cli \
-  --csv examples/mops_sample.csv \
-  --months 12 \
-  --fx 16000 \
-  --alpha 1.5 \
-  --freight 2.0 \
-  --distribution 500 \
-  --tax 11 \
-  --output outputs
-```
-
-Prediksi 1, 2, atau 3 bulan:
-
-```bash
-python -m gasoil_app.cli --source yahoo_heating_oil --months 1
-python -m gasoil_app.cli --source yahoo_heating_oil --months 2
-python -m gasoil_app.cli --source yahoo_heating_oil --months 3
-```
-
-Output:
-
-- `outputs/source_data.csv`: data mentah/hasil fetch yang sudah dinormalisasi ke `USD/bbl`.
-- `outputs/monthly_analysis.csv`: rata-rata bulanan dan estimasi IDR/liter.
-- `outputs/forecast.csv`: prediksi, interval indikatif 90%, dan estimasi IDR/liter.
-
-## Rumus estimasi harga
+Buka browser ke alamat:
 
 ```text
-base_usd_per_bbl = mops_usd_per_bbl + alpha_usd_per_bbl + freight_usd_per_bbl
-base_idr_per_liter = base_usd_per_bbl * fx_idr_per_usd / 158.987294928
-estimated_idr_per_liter = base_idr_per_liter * (1 + tax_percent/100)
-                          + distribution_idr_per_liter
-                          - subsidy_idr_per_liter
+http://127.0.0.1:8000/
 ```
 
-Sesuaikan parameter sesuai formula komersial/internal perusahaan Anda.
+## Cara Pakai Singkat
 
-## Metode prediksi
+### Untuk Admin
 
-Tersedia tiga metode sederhana:
+1. Login menggunakan akun admin/staff.
+2. Buka menu **Upload Dokumen** untuk menambahkan SOP atau materi.
+3. Buka menu **Upload User** untuk import data karyawan dari CSV.
+4. Buka menu **Buat Event** jika ingin membuat jadwal sosialisasi event.
+5. Gunakan Django Admin untuk pengelolaan data lanjutan.
 
-- `damped_trend` (default): memproyeksikan tren terbaru dan tren jangka panjang secara konservatif.
-- `linear`: regresi tren linear.
-- `naive`: mengulang nilai rata-rata bulanan terakhir.
+### Untuk User/Karyawan
 
-Prediksi ini bersifat indikatif, bukan rekomendasi jual-beli atau keputusan finansial. Untuk produksi, sebaiknya tambahkan variabel eksternal seperti kurs forward, crack spread, inventory, Brent/Dubai crude, freight market, kebijakan pajak/subsidi, dan skenario geopolitik.
+1. Login menggunakan `NAME` sebagai username dan `IDBadge` sebagai password awal.
+2. Buka menu **Mandiri**.
+3. Pilih tema dan materi.
+4. Baca materi sampai bawah.
+5. Klik tombol selesai setelah tombol aktif.
+
+## Hak Akses
+
+| Role | Akses |
+| --- | --- |
+| Admin/staff | Upload dokumen, upload user, membuat event, melihat dashboard, mengelola data melalui Django Admin |
+| User/karyawan | Melihat dokumen aktif, mengikuti sosialisasi mandiri, melihat daftar event |
 
 ## Pengujian
 
+Jalankan test aplikasi:
+
 ```bash
-pytest
+python manage.py test training
 ```
+
+## Catatan Produksi
+
+Sebelum digunakan di lingkungan produksi:
+
+- ubah `SECRET_KEY`;
+- set `DEBUG = False`;
+- batasi `ALLOWED_HOSTS`;
+- siapkan konfigurasi static dan media file;
+- siapkan backup database;
+- pastikan akses file dokumen sesuai kebijakan keamanan perusahaan.
