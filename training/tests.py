@@ -10,6 +10,12 @@ from .models import Document, Employee
 
 
 class SopPortalTests(TestCase):
+
+    def test_mandiri_without_login_redirects_to_configured_login_page(self):
+        response = self.client.get(reverse('training:independent_start'))
+
+        self.assertRedirects(response, '/login/?next=/mandiri/')
+
     def test_expired_document_hidden_from_independent_selection(self):
         Document.objects.create(
             title='Expired SOP', theme='Safety', file=SimpleUploadedFile('expired.txt', b'old'),
