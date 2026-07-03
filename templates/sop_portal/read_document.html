@@ -1,0 +1,33 @@
+{% extends 'sop_portal/base.html' %}
+{% block content %}
+<h1>{{ document.title }}</h1>
+<p>{{ document.description }}</p>
+<p class="file-actions"><a href="{{ document.file.url }}" target="_blank" rel="noopener">Buka file di tab baru</a></p>
+<div class="reader" id="reader">
+  <object class="document-viewer" data="{{ document.file.url }}" type="application/pdf">
+    <div class="fallback">
+      <p>Preview PDF tidak dapat ditampilkan oleh browser.</p>
+      <a href="{{ document.file.url }}" target="_blank" rel="noopener">Klik di sini untuk membuka file PDF</a>
+    </div>
+  </object>
+</div>
+<form method="post" action="{% url 'training:complete_reading' document.pk %}">
+  {% csrf_token %}
+  <button id="complete" disabled>Saya sudah membaca sampai selesai</button>
+</form>
+<script>
+const reader = document.getElementById('reader');
+const btn = document.getElementById('complete');
+function enableWhenScrolledToBottom() {
+  if (reader.scrollTop + reader.clientHeight >= reader.scrollHeight - 10) {
+    btn.disabled = false;
+  }
+}
+reader.addEventListener('scroll', enableWhenScrolledToBottom);
+setTimeout(() => {
+  if (reader.scrollHeight <= reader.clientHeight + 10) {
+    btn.disabled = false;
+  }
+}, 800);
+</script>
+{% endblock %}
