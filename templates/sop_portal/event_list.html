@@ -1,0 +1,25 @@
+{% extends 'sop_portal/base.html' %}
+{% block content %}
+<h1>Event Sosialisasi</h1>
+<p>Pilih event aktif untuk mengisi daftar hadir sosialisasi. Event yang sudah lewat otomatis terkunci.</p>
+<div class="grid">
+  {% for event in events %}
+    <div class="panel {% if not event.is_active %}disabled-panel{% endif %}">
+      <h3>{{ event.title }}</h3>
+      <p><b>Divisi:</b> {{ event.division }}</p>
+      <p><b>Tempat:</b> {{ event.place }}</p>
+      <p><b>Waktu:</b> {{ event.schedule }}</p>
+      <p><b>Pembawa Materi:</b> {{ event.presenter }}</p>
+      <p><b>Materi:</b> {% for material in event.materials.all %}{{ material.title }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</p>
+      <p>{{ event.notes }}</p>
+      {% if event.is_active %}
+        <a class="button-link" href="{% url 'training:event_detail' event.pk %}">Pilih Event & Isi Daftar Hadir</a>
+      {% else %}
+        <span class="disabled-badge">Event sudah lewat - daftar hadir ditutup</span>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p>Belum ada event.</p>
+  {% endfor %}
+</div>
+{% endblock %}
