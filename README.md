@@ -221,3 +221,66 @@ Sebelum digunakan di lingkungan produksi:
 - siapkan konfigurasi static dan media file;
 - siapkan backup database;
 - pastikan akses file dokumen sesuai kebijakan keamanan perusahaan.
+
+## Deployment Production Tanpa Akses Administrator
+
+> Catatan penting: aplikasi Django tidak otomatis berjalan hanya dengan dicopy ke `inetpub` seperti HTML statis. Jika IIS kantor belum dikonfigurasi oleh administrator untuk reverse proxy/FastCGI, aplikasi tetap perlu dijalankan sebagai proses Python. Script berikut dibuat agar bisa dijalankan oleh user biasa selama server sudah memiliki Python dan akses network/port yang diizinkan kantor.
+
+### Opsi Praktis: Copy Folder + Jalankan Waitress
+
+1. Copy seluruh folder repository ke folder server, misalnya:
+
+   ```text
+   C:\inetpub\sop_portal
+   ```
+
+2. Buka Command Prompt dari folder tersebut.
+3. Jalankan:
+
+   ```bat
+   scripts\run_production.bat
+   ```
+
+Script tersebut akan:
+
+- membuat virtual environment `.venv` jika belum ada;
+- install dependency dari `requirements.txt`;
+- menjalankan migrasi database SQLite;
+- menjalankan `collectstatic`;
+- menjalankan aplikasi dengan Waitress pada port default `8000`.
+
+Aplikasi kemudian dapat dibuka dari:
+
+```text
+http://nama-server:8000/
+```
+
+Jika ingin memakai port lain tanpa akses admin, set variable `PORT` sebelum menjalankan script:
+
+```bat
+set PORT=8080
+scripts\run_production.bat
+```
+
+### Environment Variable Production
+
+Variable yang bisa diset sebelum menjalankan script:
+
+```bat
+set DJANGO_SECRET_KEY=isi-secret-key-internal
+set DJANGO_DEBUG=False
+set DJANGO_ALLOWED_HOSTS=nama-server,ip-server,localhost
+set SERVE_MEDIA_IN_PRODUCTION=True
+set PORT=8000
+```
+
+### Jika Harus Lewat URL IIS Standar
+
+Jika aplikasi harus dibuka lewat URL IIS standar seperti `http://nama-server/sop/` atau port 80/443, maka tetap diperlukan bantuan administrator IT untuk salah satu opsi berikut:
+
+- membuat reverse proxy IIS ke port Waitress aplikasi;
+- membuka firewall/port yang digunakan aplikasi;
+- menjalankan aplikasi sebagai Windows Service;
+- mengatur SSL certificate bila menggunakan HTTPS.
+
+Tanpa konfigurasi tersebut, user biasa biasanya hanya bisa menjalankan aplikasi pada port yang diizinkan, misalnya `8000` atau `8080`.
