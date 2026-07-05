@@ -40,17 +40,19 @@ Siti Aminah,B12346,Incoming,Quality
 
 Data yang disimpan:
 
-- `NAME` sebagai nama karyawan sekaligus username login user biasa;
-- `IDBadge` sebagai ID badge sekaligus password awal user biasa;
+- `NAME` sebagai nama karyawan yang ditampilkan setelah login;
+- `IDBadge` sebagai ID badge sekaligus satu-satunya input login user biasa;
 - `SECTION` sebagai section;
 - `DEPT` sebagai departemen.
 
 Contoh login user biasa setelah upload CSV:
 
 ```text
-Username: Budi Santoso
-Password: B12345
+ID Badge: B12345
+Nama yang terbaca sistem: Budi Santoso
 ```
+
+Jika ID Badge belum ada di data karyawan, aplikasi akan menampilkan popup bahwa user belum terdaftar dan diminta menghubungi Superadmin.
 
 ### 3. Sosialisasi Mandiri
 
@@ -190,7 +192,7 @@ http://127.0.0.1:8000/
 
 ### Untuk User/Karyawan
 
-1. Login menggunakan `NAME` sebagai username dan `IDBadge` sebagai password awal.
+1. Login cukup menggunakan `IDBadge`; sistem otomatis lookup nama karyawan yang terdaftar.
 2. Buka menu **Mandiri**.
 3. Pilih tema dan materi.
 4. Baca materi sampai bawah.

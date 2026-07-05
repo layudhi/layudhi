@@ -1,1 +1,14 @@
-{% extends 'sop_portal/base.html' %}{% block content %}<h1>Login</h1><form method="post" class="card-form">{% csrf_token %}{{ form.as_p }}<button>Login</button></form>{% endblock %}
+{% extends 'sop_portal/base.html' %}
+{% block content %}
+<h1>Login User</h1>
+<p>Masukkan nomor ID Badge Anda. Sistem akan otomatis login menggunakan nama yang terdaftar.</p>
+<form method="post" class="card-form">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <p><label for="badge_id">ID Badge</label><input id="badge_id" name="badge_id" autofocus required placeholder="Contoh: B12345"></p>
+  <button>Login</button>
+</form>
+{% if login_error %}
+<script>alert('ID Badge belum terdaftar. Silakan informasikan ke Superadmin.');</script>
+{% endif %}
+{% endblock %}

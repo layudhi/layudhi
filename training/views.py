@@ -6,6 +6,7 @@ from xml.sax.saxutils import escape
 
 
 from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.http import HttpResponse
@@ -15,6 +16,27 @@ from django.views.decorators.http import require_POST
 
 from .forms import DocumentForm, EventForm, UploadUsersForm
 from .models import Document, Employee, ReadingRecord, SocializationEvent, SocializationExclusion
+
+
+
+def badge_login(request):
+    if request.user.is_authenticated:
+        return redirect('training:dashboard')
+    login_error = False
+    next_url = request.GET.get('next') or request.POST.get('next') or 'training:dashboard'
+    if request.method == 'POST':
+        badge = request.POST.get('badge_id', '').strip()
+        employee = Employee.objects.filter(badge_id=badge).select_related('user').first()
+        if employee is None:
+            login_error = True
+            messages.error(request, 'ID Badge belum terdaftar. Silakan informasikan ke Superadmin.')
+        else:
+            if employee.user is None:
+                employee.user = User.objects.create_user(username=employee.badge_id, first_name=employee.name)
+                employee.save(update_fields=['user'])
+            login(request, employee.user)
+            return redirect(next_url)
+    return render(request, 'sop_portal/login.html', {'login_error': login_error, 'next': next_url})
 
 
 def staff_required(view_func):
@@ -351,10 +373,9 @@ def upload_users(request):
             division = row_value(row, 'DIVISI', 'division')
             if not badge or not name:
                 continue
-            user, _ = User.objects.get_or_create(username=name, defaults={'first_name': name})
+            user, _ = User.objects.get_or_create(username=badge, defaults={'first_name': name})
             user.first_name = name
-            user.set_password(badge)
-            user.save(update_fields=['first_name', 'password'])
+            user.save(update_fields=['first_name'])
             Employee.objects.update_or_create(
                 badge_id=badge,
                 defaults={

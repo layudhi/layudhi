@@ -13,6 +13,22 @@ from .models import Document, Employee, ReadingRecord, SocializationEvent, Socia
 
 class SopPortalTests(TestCase):
 
+
+    def test_badge_login_uses_registered_employee_name(self):
+        user = User.objects.create_user(username='B123', first_name='Budi')
+        Employee.objects.create(user=user, name='Budi', badge_id='B123', department='Produksi', section='A', division='')
+
+        response = self.client.post(reverse('login'), {'badge_id': 'B123'})
+
+        self.assertRedirects(response, reverse('training:dashboard'))
+        self.assertEqual(int(self.client.session['_auth_user_id']), user.id)
+
+    def test_badge_login_rejects_unregistered_badge(self):
+        response = self.client.post(reverse('login'), {'badge_id': 'UNKNOWN'})
+
+        self.assertContains(response, 'ID Badge belum terdaftar')
+        self.assertNotIn('_auth_user_id', self.client.session)
+
     def test_mandiri_without_login_redirects_to_configured_login_page(self):
         response = self.client.get(reverse('training:independent_start'))
 
@@ -207,5 +223,4 @@ class SopPortalTests(TestCase):
         self.assertEqual(employee.name, 'Budi')
         self.assertEqual(employee.department, 'Produksi')
         self.assertEqual(employee.section, 'A')
-        self.assertEqual(employee.user.username, 'Budi')
-        self.assertTrue(employee.user.check_password('B123'))
+        self.assertEqual(employee.user.username, 'B123')
