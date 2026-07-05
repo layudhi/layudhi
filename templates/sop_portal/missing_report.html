@@ -1,0 +1,49 @@
+{% extends 'sop_portal/base.html' %}
+{% block content %}
+<h1>User Belum Sosialisasi</h1>
+<div class="panel">
+  <p><b>Tipe:</b> {% if target_type == 'document' %}SOP / Materi{% else %}Event{% endif %}</p>
+  <p><b>Nama:</b> {{ target }}</p>
+  {% if target_type == 'event' %}
+    <p><b>Waktu Event:</b> {{ target.schedule }}</p>
+  {% endif %}
+</div>
+
+<div class="download-actions">
+  <a class="button-link" href="{% url 'training:download_socialization_report' target_type target.pk 'missing' %}">Download Excel Belum Sosialisasi</a>
+  <a class="button-link" href="{% url 'training:download_socialization_report' target_type target.pk 'completed' %}">Download Excel Sudah Sosialisasi</a>
+  <a class="button-link secondary-link" href="{% url 'training:download_socialization_report' target_type target.pk 'na' %}">Download Excel N/A</a>
+</div>
+
+<h2>Belum Sosialisasi</h2>
+<table>
+  <tr><th>Nama</th><th>ID Badge</th><th>Departemen</th><th>Section</th><th>Ignore / N/A</th></tr>
+  {% for employee in missing_employees %}
+    <tr>
+      <td>{{ employee.name }}</td>
+      <td>{{ employee.badge_id }}</td>
+      <td>{{ employee.department }}</td>
+      <td>{{ employee.section }}</td>
+      <td>
+        <form method="post" action="{% url 'training:ignore_missing' target_type target.pk employee.pk %}" class="inline-form">
+          {% csrf_token %}
+          <input type="text" name="reason" placeholder="Alasan N/A (opsional)">
+          <button type="submit" class="secondary-button">Tandai N/A</button>
+        </form>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="5">Semua user sudah sosialisasi atau sudah ditandai N/A.</td></tr>
+  {% endfor %}
+</table>
+
+<h2>User N/A / Tidak Relevan</h2>
+<table>
+  <tr><th>Nama</th><th>ID Badge</th><th>Alasan</th><th>Waktu</th></tr>
+  {% for exclusion in excluded_records %}
+    <tr><td>{{ exclusion.employee.name }}</td><td>{{ exclusion.employee.badge_id }}</td><td>{{ exclusion.reason }}</td><td>{{ exclusion.created_at }}</td></tr>
+  {% empty %}
+    <tr><td colspan="4">Belum ada user yang ditandai N/A.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

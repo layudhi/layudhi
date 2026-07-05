@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 80" role="img" aria-label="KPC Prima">
+  <rect width="260" height="80" rx="10" fill="#ffffff"/>
+  <rect x="132" y="8" width="112" height="48" fill="#e31818"/>
+  <path d="M22 58V16h18v16l17-16h24L57 38l26 20H58L40 42v16H22z" fill="#050505"/>
+  <path d="M92 58V16h41c10 0 18 7 18 16s-8 16-18 16h-22v10H92zm19-24h18c3 0 5-2 5-5s-2-5-5-5h-18v10z" fill="#050505"/>
+  <path d="M145 58V16h35c10 0 18 7 18 16 0 7-4 12-10 15l14 11h-24l-11-10h-4v10h-18zm18-23h14c3 0 5-2 5-5s-2-5-5-5h-14v10z" fill="#050505"/>
+  <rect x="22" y="62" width="216" height="5" fill="#050505"/>
+  <text x="92" y="78" font-family="Arial Black,Arial,sans-serif" font-size="18" fill="#e31818">PRIMA</text>
+</svg>
