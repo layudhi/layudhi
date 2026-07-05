@@ -8,6 +8,7 @@
   <p><label for="badge_id">ID Badge</label><input id="badge_id" name="badge_id" autofocus required placeholder="Contoh: B12345"></p>
   <button>Login</button>
 </form>
+<p><a class="button-link secondary-link" href="{% url 'superadmin_login' %}">Login Superadmin dengan Username & Password</a></p>
 {% if login_error %}
 <script>alert('ID Badge belum terdaftar. Silakan informasikan ke Superadmin.');</script>
 {% endif %}

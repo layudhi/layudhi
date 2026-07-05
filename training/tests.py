@@ -14,6 +14,15 @@ from .models import Document, Employee, ReadingRecord, SocializationEvent, Socia
 class SopPortalTests(TestCase):
 
 
+
+    def test_superadmin_login_keeps_username_password_flow(self):
+        superadmin = User.objects.create_superuser(username='superadmin', password='strong-pass')
+
+        response = self.client.post(reverse('superadmin_login'), {'username': 'superadmin', 'password': 'strong-pass'})
+
+        self.assertRedirects(response, reverse('training:dashboard'))
+        self.assertEqual(int(self.client.session['_auth_user_id']), superadmin.id)
+
     def test_badge_login_uses_registered_employee_name(self):
         user = User.objects.create_user(username='B123', first_name='Budi')
         Employee.objects.create(user=user, name='Budi', badge_id='B123', department='Produksi', section='A', division='')

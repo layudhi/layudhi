@@ -198,6 +198,17 @@ http://127.0.0.1:8000/
 4. Baca materi sampai bawah.
 5. Klik tombol selesai setelah tombol aktif.
 
+
+### Login Superadmin
+
+Superadmin/admin/staff tetap login menggunakan username dan password Django melalui menu **Login Superadmin dengan Username & Password** atau URL:
+
+```text
+/superadmin/login/
+```
+
+Login ID Badge hanya berlaku untuk user/karyawan biasa.
+
 ## Hak Akses
 
 | Role | Akses |

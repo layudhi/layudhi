@@ -8,6 +8,7 @@ from django.urls import include, path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', badge_login, name='login'),
+    path('superadmin/login/', auth_views.LoginView.as_view(template_name='sop_portal/superadmin_login.html', redirect_authenticated_user=True), name='superadmin_login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('', include('training.urls')),
 ]

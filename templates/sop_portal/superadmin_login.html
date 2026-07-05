@@ -1,0 +1,11 @@
+{% extends 'sop_portal/base.html' %}
+{% block content %}
+<h1>Login Superadmin</h1>
+<p>Halaman ini khusus Superadmin/admin/staff yang memakai username dan password Django.</p>
+<form method="post" class="card-form">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button>Login Superadmin</button>
+</form>
+<p><a class="button-link secondary-link" href="{% url 'login' %}">Kembali ke Login User ID Badge</a></p>
+{% endblock %}
