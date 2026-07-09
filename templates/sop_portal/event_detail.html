@@ -1,0 +1,46 @@
+{% extends 'sop_portal/base.html' %}
+{% block content %}
+<h1>{{ event.title }}</h1>
+<div class="panel">
+  <p><b>Status:</b> {% if event.is_active %}<span class="ok">Aktif</span>{% else %}<span class="bad">Sudah lewat</span>{% endif %}</p>
+  <p><b>Divisi:</b> {{ event.division }}</p>
+  <p><b>Tempat:</b> {{ event.place }}</p>
+  <p><b>Waktu:</b> {{ event.schedule }}</p>
+  <p><b>Pembawa Materi:</b> {{ event.presenter }}</p>
+  <p>{{ event.notes }}</p>
+</div>
+
+<h2>Materi Event</h2>
+<table>
+  <tr><th>Judul</th><th>Tema</th><th>Status Anda</th></tr>
+  {% for material in event.materials.all %}
+    <tr>
+      <td>{{ material.title }}</td>
+      <td>{{ material.theme }}</td>
+      <td>{% if material.id in attended_material_ids %}<span class="ok">Sudah hadir</span>{% else %}-{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="3">Belum ada materi.</td></tr>
+  {% endfor %}
+</table>
+
+{% if event.is_active %}
+  <form method="post" action="{% url 'training:attend_event' event.pk %}" class="card-form">
+    {% csrf_token %}
+    <p>Dengan menekan tombol ini, Anda tercatat hadir/tersosialisasi untuk materi event ini.</p>
+    <button>Isi Daftar Hadir Sosialisasi</button>
+  </form>
+{% else %}
+  <div class="alert alert-warning">Event sudah lewat tanggalnya. Daftar hadir sudah ditutup dan tidak bisa dipilih lagi.</div>
+{% endif %}
+
+<h2>Daftar Hadir</h2>
+<table>
+  <tr><th>Nama</th><th>ID Badge</th><th>Departemen</th><th>Section</th><th>Waktu</th></tr>
+  {% for record in attendance %}
+    <tr><td>{{ record.employee.name }}</td><td>{{ record.employee.badge_id }}</td><td>{{ record.employee.department }}</td><td>{{ record.employee.section }}</td><td>{{ record.completed_at }}</td></tr>
+  {% empty %}
+    <tr><td colspan="5">Belum ada peserta yang mengisi daftar hadir.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
